@@ -27,6 +27,8 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 const SWIPE_THRESHOLD = 110;
+// How many upcoming cards stay mounted in the stack at once (front + behind).
+const STACK_SIZE = 2;
 
 // Shuffling uses Math.random(), which necessarily differs between the
 // server-rendered pass and the client's hydration pass — so the *first*
@@ -83,7 +85,6 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
   }, [toast]);
 
   const current = queue[0];
-  const next = queue[1];
 
   const advance = React.useCallback(
     (direction: "left" | "right") => {
@@ -123,25 +124,30 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
     );
   }
 
+  // Only the front couple of cards are kept mounted, each identified by the
+  // movie's own id. When the front card is swiped away, the card that was
+  // sitting "behind" it keeps that same key — React reuses its existing DOM
+  // node instead of unmounting it, so Motion animates it smoothly from the
+  // "behind" position into the "front" position rather than popping in a
+  // freshly-mounted card. That continuity is what keeps the stack's order
+  // visually stable across a swipe.
+  const stack = queue.slice(0, STACK_SIZE);
+
   return (
     <div className="flex flex-col items-center">
       <div className="relative mx-auto h-[560px] w-full max-w-sm sm:h-[600px]">
-        {next && (
-          <div className="absolute inset-0 scale-[0.94] translate-y-3 opacity-60">
-            <MovieCard movie={next} className="h-full" />
-          </div>
-        )}
-
-        <AnimatePresence>
-          {current && (
-            <SwipeCard
-              key={current.id}
-              movie={current}
-              exiting={exiting}
-              onExitComplete={(dir) => advance(dir)}
-              onSwipeStart={setExiting}
+        <AnimatePresence initial={false}>
+          {stack.map((movie, index) => (
+            <DeckCard
+              key={movie.id}
+              movie={movie}
+              isTop={index === 0}
+              behindOffset={index}
+              exiting={index === 0 ? exiting : null}
+              onSwipeStart={index === 0 ? setExiting : undefined}
+              onExitComplete={index === 0 ? advance : undefined}
             />
-          )}
+          ))}
         </AnimatePresence>
       </div>
 
@@ -214,30 +220,49 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
   );
 }
 
-function SwipeCard({
+function DeckCard({
   movie,
+  isTop,
+  behindOffset,
   exiting,
-  onExitComplete,
   onSwipeStart,
+  onExitComplete,
 }: {
   movie: Movie;
+  isTop: boolean;
+  behindOffset: number;
   exiting: "left" | "right" | null;
-  onExitComplete: (direction: "left" | "right") => void;
-  onSwipeStart: (direction: "left" | "right") => void;
+  onSwipeStart?: (direction: "left" | "right") => void;
+  onExitComplete?: (direction: "left" | "right") => void;
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-18, 18]);
   const saveOpacity = useTransform(x, [20, 120], [0, 1]);
   const skipOpacity = useTransform(x, [-120, -20], [1, 0]);
 
+  // The front card's x/rotate are driven by the drag gesture itself (via the
+  // motion values above), so only cards further back get their position
+  // animated through `animate`. Mixing the two on the same card is what lets
+  // a promoted "behind" card glide into the front slot instead of resetting.
+  const restingAnimate = isTop
+    ? { scale: 1, opacity: 1, y: 0, transition: { duration: 0.28 } }
+    : {
+        scale: 1 - behindOffset * 0.06,
+        opacity: Math.max(0, 0.6 - (behindOffset - 1) * 0.6),
+        y: behindOffset * 12,
+        x: 0,
+        rotate: 0,
+        transition: { duration: 0.28 },
+      };
+
   return (
     <motion.div
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
-      style={{ x, rotate }}
-      drag={exiting ? false : "x"}
+      className={isTop ? "absolute inset-0 cursor-grab active:cursor-grabbing" : "absolute inset-0"}
+      style={isTop ? { x, rotate } : undefined}
+      drag={isTop && !exiting ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.9}
-      initial={{ scale: 0.95, opacity: 0, y: 10 }}
+      initial={false}
       animate={
         exiting
           ? {
@@ -246,29 +271,37 @@ function SwipeCard({
               opacity: 0,
               transition: { duration: 0.35, ease: "easeIn" },
             }
-          : { scale: 1, opacity: 1, y: 0, transition: { duration: 0.25 } }
+          : restingAnimate
       }
-      exit={{ opacity: 0 }}
+      exit={{ opacity: 0, transition: { duration: 0.15 } }}
       onAnimationComplete={() => {
-        if (exiting) onExitComplete(exiting);
+        if (exiting) onExitComplete?.(exiting);
       }}
-      onDragEnd={(_, info) => {
-        if (info.offset.x > SWIPE_THRESHOLD) onSwipeStart("right");
-        else if (info.offset.x < -SWIPE_THRESHOLD) onSwipeStart("left");
-      }}
+      onDragEnd={
+        isTop
+          ? (_, info) => {
+              if (info.offset.x > SWIPE_THRESHOLD) onSwipeStart?.("right");
+              else if (info.offset.x < -SWIPE_THRESHOLD) onSwipeStart?.("left");
+            }
+          : undefined
+      }
     >
-      <motion.span
-        style={{ opacity: saveOpacity }}
-        className="absolute top-6 left-6 z-10 -rotate-12 rounded-lg border-4 border-primary px-3 py-1 font-display text-2xl font-black text-primary"
-      >
-        SAVE
-      </motion.span>
-      <motion.span
-        style={{ opacity: skipOpacity }}
-        className="absolute top-6 right-6 z-10 rotate-12 rounded-lg border-4 border-destructive px-3 py-1 font-display text-2xl font-black text-destructive"
-      >
-        SKIP
-      </motion.span>
+      {isTop && (
+        <>
+          <motion.span
+            style={{ opacity: saveOpacity }}
+            className="absolute top-6 left-6 z-10 -rotate-12 rounded-lg border-4 border-primary px-3 py-1 font-display text-2xl font-black text-primary"
+          >
+            SAVE
+          </motion.span>
+          <motion.span
+            style={{ opacity: skipOpacity }}
+            className="absolute top-6 right-6 z-10 rotate-12 rounded-lg border-4 border-destructive px-3 py-1 font-display text-2xl font-black text-destructive"
+          >
+            SKIP
+          </motion.span>
+        </>
+      )}
       <MovieCard movie={movie} className="h-full shadow-2xl" />
     </motion.div>
   );
