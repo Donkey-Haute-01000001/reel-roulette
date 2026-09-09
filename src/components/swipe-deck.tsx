@@ -99,10 +99,14 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
 
       setQueue((prev) => {
         const rest = prev.slice(1);
-        if (rest.length < 4 && movies.length > 0) {
-          const refill = shuffle(movies).filter((m) => m.id !== lastIdRef.current);
-          return [...rest, ...refill];
-        }
+if (rest.length < 4 && movies.length > 0) {
+  const existingIds = new Set(rest.map((m) => m.id));
+  const refill = shuffle(movies).filter(
+    (m) => !existingIds.has(m.id)
+  );
+
+  return [...rest, ...refill];
+}
         return rest;
       });
       setExiting(null);
@@ -126,16 +130,17 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
     <div className="flex flex-col items-center">
       <div className="relative mx-auto h-[560px] w-full max-w-sm sm:h-[600px]">
         <AnimatePresence initial={false}>
-          {current && (
-            <SwipeCard
-              key={current.id}
-              movie={current}
-              exiting={exiting}
-              onExitComplete={(dir) => advance(dir)}
-              onSwipeStart={setExiting}
-            />
-          )}
-        </AnimatePresence>
+  {queue.slice(0, 2).map((movie, index) => (
+    <SwipeCard
+      key={movie.id}
+      movie={movie}
+      exiting={index === 0 ? exiting : null}
+      onExitComplete={(dir) => advance(dir)}
+      onSwipeStart={setExiting}
+      isTop={index === 0}
+    />
+  ))}
+</AnimatePresence>
       </div>
 
       <div className="mt-6 flex items-center justify-center gap-4">
@@ -212,11 +217,13 @@ function SwipeCard({
   exiting,
   onExitComplete,
   onSwipeStart,
+  isTop,
 }: {
   movie: Movie;
   exiting: "left" | "right" | null;
   onExitComplete: (direction: "left" | "right") => void;
   onSwipeStart: (direction: "left" | "right") => void;
+  isTop: boolean;
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-18, 18]);
@@ -224,10 +231,15 @@ function SwipeCard({
   const skipOpacity = useTransform(x, [-120, -20], [1, 0]);
 
   return (
-    <motion.div
-      className="absolute inset-0 cursor-grab active:cursor-grabbing"
-      style={{ x, rotate }}
-      drag={exiting ? false : "x"}
+<motion.div
+  className="absolute inset-0 cursor-grab active:cursor-grabbing"
+  style={{
+    x: isTop ? x : 0,
+    rotate: isTop ? rotate : 0,
+    scale: isTop ? 1 : 0.96,
+    y: isTop ? 0 : 12,
+  }}
+  drag={isTop && !exiting ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.9}
       initial={{ scale: 0.95, opacity: 0, y: 10 }}
