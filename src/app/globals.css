@@ -1,26 +1,138 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --radius: 0.75rem;
+
+  /* Light mode exists but this app is designed dark-first, game-hub style */
+  --background: #f2f2f4;
+  --foreground: #141416;
+
+  --card: #ffffff;
+  --card-foreground: #141416;
+
+  --popover: #ffffff;
+  --popover-foreground: #141416;
+
+  --primary: #3fa562;
+  --primary-foreground: #08120c;
+
+  --secondary: #e7e7ea;
+  --secondary-foreground: #141416;
+
+  --muted: #ebebee;
+  --muted-foreground: #6b6b72;
+
+  --accent: #3fa562;
+  --accent-foreground: #08120c;
+
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+
+  --border: #dcdce0;
+  --input: #dcdce0;
+  --ring: #3fa562;
+}
+
+.dark {
+  /* CineNerdle-inspired: near-black charcoal, colorful genre accents */
+  --background: #16171a;
+  --foreground: #f4f4f5;
+
+  --card: #202126;
+  --card-foreground: #f4f4f5;
+
+  --popover: #202126;
+  --popover-foreground: #f4f4f5;
+
+  --primary: #5ebe83;
+  --primary-foreground: #0a1510;
+
+  --secondary: #2a2b31;
+  --secondary-foreground: #f4f4f5;
+
+  --muted: #232429;
+  --muted-foreground: #9a9aa2;
+
+  --accent: #5ebe83;
+  --accent-foreground: #0a1510;
+
+  --destructive: #f16267;
+  --destructive-foreground: #16171a;
+
+  --border: #313239;
+  --input: #313239;
+  --ring: #5ebe83;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* genre accent palette */
+  --color-genre-action: #ef4444;
+  --color-genre-comedy: #f5a623;
+  --color-genre-drama: #3b82f6;
+  --color-genre-horror: #a855f7;
+  --color-genre-scifi: #14b8a6;
+  --color-genre-romance: #ec4899;
+  --color-genre-thriller: #f97316;
+  --color-genre-animation: #84cc16;
+  --color-genre-fantasy: #6366f1;
+  --color-genre-documentary: #94a3b8;
+
+  --font-display: var(--font-archivo);
+  --font-sans: var(--font-archivo);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .card-glow {
+    box-shadow: 0 0 0 1px var(--border), 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+  }
 }
