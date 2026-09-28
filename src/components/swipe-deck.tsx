@@ -26,6 +26,19 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+// A fresh shuffled pass over the whole pool, only ever built once the
+// previous bag is exhausted — never a partial reshuffle while cards from
+// the current pass are still queued. Swaps the excluded (just-seen) movie
+// off the front so it can't repeat back-to-back.
+function nextBag(pool: Movie[], excludeId: number | null): Movie[] {
+  const bag = shuffle(pool);
+  if (excludeId != null && bag.length > 1 && bag[0].id === excludeId) {
+    const swapIndex = bag.findIndex((m) => m.id !== excludeId);
+    if (swapIndex > 0) [bag[0], bag[swapIndex]] = [bag[swapIndex], bag[0]];
+  }
+  return bag;
+}
+
 const SWIPE_THRESHOLD = 110;
 
 // Shuffling uses Math.random(), which necessarily differs between the
@@ -44,15 +57,18 @@ function useMounted() {
   );
 }
 
+type Phase = "idle" | "exiting";
+
 export function SwipeDeck({ movies }: { movies: Movie[] }) {
   const mounted = useMounted();
   const [queue, setQueue] = React.useState<Movie[]>(movies);
-  const [exiting, setExiting] = React.useState<"left" | "right" | null>(null);
+  const [phase, setPhase] = React.useState<Phase>("idle");
+  const [exitDirection, setExitDirection] = React.useState<"left" | "right" | null>(null);
+  const [exitingMovie, setExitingMovie] = React.useState<Movie | null>(null);
   const [savedCount, setSavedCount] = React.useState(0);
   const [seenCount, setSeenCount] = React.useState(0);
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
-  const lastIdRef = React.useRef<number | null>(null);
 
   // Rebuild the queue whenever the filtered movie pool changes. (Adjusting
   // state during render, per React's guidance, rather than in an effect —
@@ -62,7 +78,9 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
   if (movies !== prevMovies) {
     setPrevMovies(movies);
     setQueue(movies);
-    setExiting(null);
+    setPhase("idle");
+    setExitDirection(null);
+    setExitingMovie(null);
     setSeenCount(0);
   }
 
@@ -83,11 +101,21 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
   }, [toast]);
 
   const current = queue[0];
+  // While a card is exiting, keep showing the card that's actually
+  // animating off screen — `queue[0]` has already advanced past it (the
+  // next card is decided at swipe-commit time, below).
+  const displayedMovie = phase === "exiting" ? exitingMovie : current;
 
-  const advance = React.useCallback(
+  // Decide the next card the instant a swipe is committed (drag threshold
+  // crossed, or a button pressed) — not when the exit animation finishes.
+  // This closes the double-fire race: once `phase` flips to "exiting", the
+  // guard below ignores any further commit attempts until it flips back.
+  const commitSwipe = React.useCallback(
     (direction: "left" | "right") => {
-      if (!current) return;
-      lastIdRef.current = current.id;
+      if (phase !== "idle" || !current) return;
+      setPhase("exiting");
+      setExitDirection(direction);
+      setExitingMovie(current);
       setSeenCount((c) => c + 1);
       if (direction === "right") {
         setSavedCount((c) => c + 1);
@@ -99,16 +127,24 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
 
       setQueue((prev) => {
         const rest = prev.slice(1);
-        if (rest.length < 4 && movies.length > 0) {
-          const refill = shuffle(movies).filter((m) => m.id !== lastIdRef.current);
-          return [...rest, ...refill];
+        if (rest.length === 0 && movies.length > 0) {
+          return nextBag(movies, current.id);
         }
         return rest;
       });
-      setExiting(null);
     },
-    [current, movies]
+    [phase, current, movies]
   );
+
+  // Only reveal the next card once the exit animation has genuinely
+  // finished. Guarded so a second `onAnimationComplete` fire (e.g. the
+  // drag-elastic snap-back racing the exit) can't advance the deck twice.
+  const finishExit = React.useCallback(() => {
+    if (phase !== "exiting") return;
+    setPhase("idle");
+    setExitDirection(null);
+    setExitingMovie(null);
+  }, [phase]);
 
   if (movies.length === 0) {
     return (
@@ -126,13 +162,13 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
     <div className="flex flex-col items-center">
       <div className="relative mx-auto h-[560px] w-full max-w-sm sm:h-[600px]">
         <AnimatePresence initial={false}>
-          {current && (
+          {displayedMovie && (
             <SwipeCard
-              key={current.id}
-              movie={current}
-              exiting={exiting}
-              onExitComplete={(dir) => advance(dir)}
-              onSwipeStart={setExiting}
+              key={displayedMovie.id}
+              movie={displayedMovie}
+              exiting={phase === "exiting" ? exitDirection : null}
+              onExitComplete={finishExit}
+              onSwipeStart={commitSwipe}
             />
           )}
         </AnimatePresence>
@@ -144,8 +180,8 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
           variant="outline"
           className="size-14 border-destructive/40 text-destructive hover:bg-destructive/10"
           aria-label="Reroll"
-          disabled={!current || exiting !== null}
-          onClick={() => setExiting("left")}
+          disabled={!displayedMovie || phase !== "idle"}
+          onClick={() => commitSwipe("left")}
         >
           <RotateCcw className="size-6" />
         </Button>
@@ -153,7 +189,7 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
           size="icon"
           variant="outline"
           aria-label="Details"
-          disabled={!current}
+          disabled={!displayedMovie || phase !== "idle"}
           onClick={() => setDetailOpen(true)}
         >
           <Info className="size-5" />
@@ -162,8 +198,8 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
           size="icon"
           className="size-14 bg-primary text-primary-foreground hover:brightness-110"
           aria-label="Save to watchlist"
-          disabled={!current || exiting !== null}
-          onClick={() => setExiting("right")}
+          disabled={!displayedMovie || phase !== "idle"}
+          onClick={() => commitSwipe("right")}
         >
           <Bookmark className="size-6" />
         </Button>
@@ -181,24 +217,26 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent>
-          {current && (
+          {displayedMovie && (
             <>
               <MoviePoster
-                genre={current.primary_genre}
-                title={current.title}
-                year={current.release_year}
+                genre={displayedMovie.primary_genre}
+                title={displayedMovie.title}
+                year={displayedMovie.release_year}
                 className="-mx-6 -mt-6 mb-2 h-40"
               />
               <DialogHeader>
                 <DialogTitle>
-                  {current.title} ({current.release_year})
+                  {displayedMovie.title} ({displayedMovie.release_year})
                 </DialogTitle>
                 <DialogDescription>
-                  Directed by {current.director} · {current.runtime_minutes} min · rated{" "}
-                  {current.rating.toFixed(1)}/10
+                  Directed by {displayedMovie.director} · {displayedMovie.runtime_minutes} min ·
+                  rated {displayedMovie.rating.toFixed(1)}/10
                 </DialogDescription>
               </DialogHeader>
-              <p className="text-sm leading-relaxed text-foreground/90">{current.synopsis}</p>
+              <p className="text-sm leading-relaxed text-foreground/90">
+                {displayedMovie.synopsis}
+              </p>
             </>
           )}
         </DialogContent>
