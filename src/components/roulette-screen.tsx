@@ -30,7 +30,7 @@ export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: 
   return (
     <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
       <BroadsideBanner
-        className="mb-5"
+        className="mb-4"
         kicker="Three Reels · One Picture"
         lead="Try Your Luck at the"
         title="Spin"

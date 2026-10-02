@@ -33,7 +33,7 @@ export function MovieDetails({
   return (
     <div className={cn("flex flex-col gap-2 text-center text-ink", className)}>
       <p className="font-slab text-[9px] tracking-[0.3em] text-crimson uppercase">{kicker}</p>
-      <h3 className="text-2xl leading-tight text-balance uppercase sm:text-[1.7rem]">
+      <h3 className="text-xl leading-tight text-balance uppercase sm:text-2xl">
         {movie.title}
       </h3>
       <p className="font-woodtype text-sm tracking-wide">
@@ -66,7 +66,7 @@ export function MovieDetails({
         </p>
       )}
 
-      <p className="font-serif text-sm leading-relaxed">{movie.synopsis}</p>
+      <p className="font-serif text-[13px] leading-snug">{movie.synopsis}</p>
 
       {movie.mood_tags.length > 0 && (
         <p className="font-serif text-xs italic" style={{ color: `color-mix(in srgb, ${meta.color} 60%, #000)` }}>

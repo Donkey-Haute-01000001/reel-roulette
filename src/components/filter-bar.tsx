@@ -30,46 +30,45 @@ export function FilterBar({
     });
   };
 
+  // One compact, centred row: the genre chips, then Clear and any extra
+  // controls (e.g. Reshuffle), wrapping only when the screen is too narrow.
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex flex-wrap justify-center gap-1.5">
-        {genres.map((g) => {
-          const meta = GENRE_META[g.slug];
-          const active = value.genres.includes(g.slug);
-          return (
-            <button
-              key={g.slug}
-              disabled={disabled}
-              onClick={() => toggleGenre(g.slug)}
-              aria-pressed={active}
-              className={cn(
-                "flex items-center gap-1.5 rounded-[3px] border px-2.5 py-1 font-slab text-[9px] tracking-[0.12em] uppercase transition-colors disabled:opacity-50",
-                active
-                  ? "border-ink text-ink shadow-[inset_0_0_0_1px_rgb(0_0_0/0.25)]"
-                  : "border-gold/40 bg-black/25 text-paper/80 hover:border-gold hover:text-paper"
-              )}
-              style={active ? { background: meta.color } : undefined}
-            >
-              {meta.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {hasActiveFilters(value) && (
-          <Button
-            variant="ghost"
-            size="sm"
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
+      {genres.map((g) => {
+        const meta = GENRE_META[g.slug];
+        const active = value.genres.includes(g.slug);
+        return (
+          <button
+            key={g.slug}
             disabled={disabled}
-            onClick={() => onChange(EMPTY_FILTERS)}
+            onClick={() => toggleGenre(g.slug)}
+            aria-pressed={active}
+            className={cn(
+              "flex h-7 items-center rounded-[3px] border px-2 font-slab text-[8px] tracking-[0.12em] uppercase transition-colors disabled:opacity-50",
+              active
+                ? "border-ink text-ink shadow-[inset_0_0_0_1px_rgb(0_0_0/0.25)]"
+                : "border-gold/40 bg-black/25 text-paper/80 hover:border-gold hover:text-paper"
+            )}
+            style={active ? { background: meta.color } : undefined}
           >
-            Clear Filters
-          </Button>
-        )}
+            {meta.label}
+          </button>
+        );
+      })}
 
-        {children}
-      </div>
+      {hasActiveFilters(value) && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2"
+          disabled={disabled}
+          onClick={() => onChange(EMPTY_FILTERS)}
+        >
+          Clear
+        </Button>
+      )}
+
+      {children}
     </div>
   );
 }

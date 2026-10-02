@@ -93,7 +93,7 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
         size="sm"
         onClick={shuffleSeenBackIn}
         disabled={clearing}
-        className="gap-1.5"
+        className="h-7 gap-1.5"
         title="Return every discarded picture to the deck"
       >
         <Undo2 className="size-3.5" /> {clearing ? "Shuffling…" : `Shuffle Discards Back In (${seenCount})`}
@@ -116,7 +116,7 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
 
       <div className="mb-4">
         <FilterBar genres={genres} value={filters} onChange={changeFilters}>
-          <Button variant="secondary" size="sm" onClick={reshuffle} className="gap-1.5">
+          <Button variant="secondary" size="sm" onClick={reshuffle} className="h-7 gap-1.5">
             <Shuffle className="size-3.5" /> Reshuffle
           </Button>
           {shuffleBackButton}

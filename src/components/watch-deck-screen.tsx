@@ -109,7 +109,7 @@ export function WatchDeckScreen({
   return (
     <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
       <BroadsideBanner
-        className="mb-5"
+        className="mb-4"
         kicker="The Card Room"
         lead="Your Personal"
         title="Watch Deck"
@@ -123,7 +123,7 @@ export function WatchDeckScreen({
       )}
 
       {entries === null ? (
-        <Skeleton className="h-[290px] rounded-[48px] sm:rounded-[140px]" />
+        <Skeleton className="h-[250px] rounded-[48px] sm:rounded-[140px]" />
       ) : (
         <>
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -138,7 +138,7 @@ export function WatchDeckScreen({
               <>
                 <motion.div
                   key={`${onTable.movie.id}-${dealKey}`}
-                  className="w-[150px] shrink-0 [perspective:900px] sm:w-[160px]"
+                  className="w-[130px] shrink-0 [perspective:900px] sm:w-[140px]"
                   initial={{ ...DEAL_FROM[from], opacity: 0 }}
                   animate={{ x: 0, y: 0, scale: 1, rotate: -3, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 240, damping: 24 }}
@@ -164,7 +164,7 @@ export function WatchDeckScreen({
                 </motion.div>
                 <motion.div
                   key={`details-${onTable.movie.id}-${dealKey}`}
-                  className="broadside w-full max-w-md px-5 py-4"
+                  className="broadside w-full max-w-md px-4 py-3"
                   initial={{ opacity: 0, y: 12, rotate: 1 }}
                   animate={{ opacity: 1, y: 0, rotate: 0.6 }}
                   transition={{ delay: 0.15, duration: 0.35 }}

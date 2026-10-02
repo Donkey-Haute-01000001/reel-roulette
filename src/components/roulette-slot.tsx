@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { animate, motion, useMotionValue, useTransform, type MotionValue } from "motion/react";
+import { animate, motion, useMotionValue, type MotionValue } from "motion/react";
 import Link from "next/link";
 import { Bookmark, Dices, HelpCircle, Layers } from "lucide-react";
 
@@ -16,18 +16,19 @@ import { MovieCard } from "@/components/movie-card";
 import { MovieDetails } from "@/components/movie-details";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
+import { CoinSlot, FloatingCoins, Lever, type SlotHint } from "@/components/slot-parts";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn, shuffle } from "@/lib/utils";
 
 type Source = "deck" | "catalog";
 
-const TILE_H = 100;
+const TILE_H = 80;
 // Each reel travels further and stops later than the one to its left, so
 // they land left → middle → right ~350ms apart.
 const REEL_FILLERS = [24, 29, 34];
 const REEL_DURATIONS = [1.7, 2.05, 2.4];
 const REEL_EASE = [0.15, 0.85, 0.25, 1] as const;
 const BULBS = 14;
-const LEVER_TRAVEL = 84;
 
 // Every strip is laid out so its *stop* row is the second-to-last tile: the
 // last three tiles are what's visible once it lands (above / payline /
@@ -74,13 +75,29 @@ export function RouletteSlot({
   const y1 = useMotionValue(0);
   const y2 = useMotionValue(0);
   const reelYs = [y0, y1, y2];
-  // The pull lever: the knob drops, the rod shortens with it, then springs back.
-  const knobY = useMotionValue(0);
-  const rodHeight = useTransform(knobY, (v) => LEVER_TRAVEL + 24 - v);
+  // The lever's swing, in degrees: 0 = up at rest, 180 = pulled all the way down.
+  const leverTheta = useMotionValue(0);
+  // Each spin costs a coin: today's coins float beside the machine (one per
+  // spin left), and one must be in the slot before the lever will pull.
+  const [coins, setCoins] = React.useState<number[] | null>(null);
+  const [credited, setCredited] = React.useState(false);
+  // Which coin is in the slot, so Coin Return can give that one back.
+  const [insertedCoin, setInsertedCoin] = React.useState<number | null>(null);
+  const slotRef = React.useRef<HTMLButtonElement>(null);
+  const [slotHint, setSlotHint] = React.useState<SlotHint>("idle");
+  // The result placard pops up over the page when the reels land; it can be
+  // closed and reopened from the line under the machine.
+  const [resultOpen, setResultOpen] = React.useState(false);
 
   React.useEffect(() => {
     getSpinsRemaining().then(setSpinsLeft);
   }, []);
+
+  // Deal out today's coins once the spin count is known. (State adjusted
+  // during render, per React's guidance, rather than in an effect.)
+  if (coins === null && spinsLeft !== null) {
+    setCoins(Array.from({ length: Math.min(spinsLeft, DAILY_SPINS) }, (_, i) => i));
+  }
 
   const pool = source === "deck" ? deckMovies : catalog;
   const filtered = React.useMemo(() => applyFilters(pool, filters), [pool, filters]);
@@ -104,11 +121,19 @@ export function RouletteSlot({
   else if (filtered.length === 0) blockedReason = "No pictures answer to those particulars.";
 
   const spin = async () => {
-    if (spinning || blockedReason) return;
+    if (spinning || blockedReason || !credited) return;
     setSpinning(true);
+    setCredited(false); // the coin is spent
+    setInsertedCoin(null);
     setResult(null);
     setLanded(0);
-    animate(knobY, [0, LEVER_TRAVEL, 0], { duration: 0.7, times: [0, 0.35, 1], ease: "easeInOut" });
+    // The lever goes all the way down (from wherever a pull left it), then
+    // swings back up.
+    animate(leverTheta, [leverTheta.get(), 180, 180, 0], {
+      duration: 1.3,
+      times: [0, 0.2, 0.35, 1],
+      ease: ["easeIn", "linear", "easeOut"],
+    });
 
     // Re-check against the server right before spinning, in case another tab
     // used up today's spins.
@@ -116,6 +141,7 @@ export function RouletteSlot({
       const remaining = await getSpinsRemaining();
       if (remaining <= 0) {
         setSpinsLeft(0);
+        setCoins([]);
         setSpinning(false);
         return;
       }
@@ -152,6 +178,7 @@ export function RouletteSlot({
     );
 
     setResult(target);
+    setResultOpen(true);
     setSpinning(false);
   };
 
@@ -167,11 +194,27 @@ export function RouletteSlot({
     }
   };
 
-  const canSpin = !spinning && blockedReason === null;
+  const canSpin = !spinning && blockedReason === null && credited;
+  const canInsert = !spinning && blockedReason === null && !credited;
+
+  const insertCoin = (id: number) => {
+    setCoins((prev) => (prev ?? []).filter((c) => c !== id));
+    setInsertedCoin(id);
+    setCredited(true);
+  };
+
+  // Coin Return: take the coin back out before pulling the lever.
+  const returnCoin = () => {
+    if (!credited || spinning || insertedCoin === null) return;
+    const id = insertedCoin;
+    setCoins((prev) => [...(prev ?? []), id].sort((a, b) => a - b));
+    setInsertedCoin(null);
+    setCredited(false);
+  };
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-2">
         <div className="flex items-center gap-2">
           <span className="font-slab text-[10px] tracking-[0.2em] text-gold-light uppercase">
             Spin For:
@@ -190,95 +233,101 @@ export function RouletteSlot({
         <FilterBar genres={genres} value={filters} onChange={setFilters} disabled={spinning} />
       </div>
 
-      <div className="relative w-full max-w-md sm:pr-10">
-        {/* Gold trim around the cabinet */}
-        <div
-          className="rounded-[28px] p-[3px] shadow-2xl shadow-black/60"
-          style={{
-            background: "linear-gradient(160deg, #f6dc8c, #a7791c 35%, #f6dc8c 55%, #8a6417)",
-          }}
-        >
-          <div className="rounded-[25px] bg-gradient-to-b from-[#2c2c33] to-[#121215] p-3 sm:p-4">
-            {/* Marquee */}
-            <div className="mb-3 rounded-2xl bg-[#0b0b0e] px-4 py-2.5 text-center">
-              <Bulbs spinning={spinning} won={result !== null} />
-              <p className="my-1.5 font-woodtype text-3xl tracking-[0.3em] text-[#f6dc8c] [text-shadow:0_0_12px_rgba(246,220,140,0.55)]">
-                SPIN
-              </p>
-              <Bulbs spinning={spinning} won={result !== null} reverse />
-            </div>
-
-            {/* Reel window */}
-            <div className="relative rounded-xl bg-[#0b0b0e] p-1.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.9)]">
-              <div className="grid grid-cols-3 gap-1.5">
-                {[0, 1, 2].map((r) => (
-                  <Reel
-                    key={r}
-                    strip={shownStrips?.[r] ?? null}
-                    y={reelYs[r]}
-                    moving={spinning && landed <= r}
-                    won={landed > r && result !== null}
-                  />
-                ))}
+      {/* The cabinet is always dead centre; the coin tray and lever hang off
+          its sides without shifting it. On phones the side padding makes
+          room for the lever. */}
+      <div className="relative mx-auto w-full max-w-md max-sm:px-10">
+        {/* Coin tray: beside the machine on wide screens, above it otherwise.
+            Layered over the cabinet so a coin flies in front of it. */}
+        <div className="relative z-30 mb-4 flex justify-center lg:absolute lg:top-1/2 lg:right-full lg:mr-8 lg:mb-0 lg:-translate-y-1/2">
+          <FloatingCoins
+            coins={coins ?? []}
+            enabled={canInsert}
+            slotRef={slotRef}
+            onInsert={insertCoin}
+            onHint={setSlotHint}
+          />
+        </div>
+        <div className="relative">
+          {/* Gold trim around the cabinet */}
+          <div
+            className="rounded-[28px] p-[3px] shadow-2xl shadow-black/60"
+            style={{
+              background: "linear-gradient(160deg, #f6dc8c, #a7791c 35%, #f6dc8c 55%, #8a6417)",
+            }}
+          >
+            <div className="rounded-[25px] bg-gradient-to-b from-[#2c2c33] to-[#121215] p-2.5 sm:p-3">
+              {/* Marquee */}
+              <div className="mb-2.5 rounded-2xl bg-[#0b0b0e] px-4 py-1.5 text-center">
+                <Bulbs spinning={spinning} won={result !== null} />
+                <p className="my-1 font-woodtype text-2xl tracking-[0.3em] text-[#f6dc8c] [text-shadow:0_0_12px_rgba(246,220,140,0.55)]">
+                  SPIN
+                </p>
+                <Bulbs spinning={spinning} won={result !== null} reverse />
               </div>
-              {/* Payline through the middle row, with pointers at each end */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0"
-                style={{ top: 6 + TILE_H * 1.5 - 1 }}
-              >
+
+              {/* Reel window */}
+              <div className="relative rounded-xl bg-[#0b0b0e] p-1.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.9)]">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[0, 1, 2].map((r) => (
+                    <Reel
+                      key={r}
+                      strip={shownStrips?.[r] ?? null}
+                      y={reelYs[r]}
+                      moving={spinning && landed <= r}
+                      won={landed > r && result !== null}
+                    />
+                  ))}
+                </div>
+                {/* Payline through the middle row, with pointers at each end */}
                 <div
-                  className={cn(
-                    "h-0.5 w-full bg-[#e11d2e] transition-opacity",
-                    result ? "opacity-100" : "opacity-50"
-                  )}
-                />
-                <span className="absolute top-1/2 -left-0.5 -translate-y-1/2 border-y-[7px] border-l-[9px] border-y-transparent border-l-[#e11d2e]" />
-                <span className="absolute top-1/2 -right-0.5 -translate-y-1/2 border-y-[7px] border-r-[9px] border-y-transparent border-r-[#e11d2e]" />
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0"
+                  style={{ top: 6 + TILE_H * 1.5 - 1 }}
+                >
+                  <div
+                    className={cn(
+                      "h-0.5 w-full bg-[#e11d2e] transition-opacity",
+                      result ? "opacity-100" : "opacity-50"
+                    )}
+                  />
+                  <span className="absolute top-1/2 -left-0.5 -translate-y-1/2 border-y-[7px] border-l-[9px] border-y-transparent border-l-[#e11d2e]" />
+                  <span className="absolute top-1/2 -right-0.5 -translate-y-1/2 border-y-[7px] border-r-[9px] border-y-transparent border-r-[#e11d2e]" />
+                </div>
               </div>
-            </div>
 
-            {/* Controls: spin counter + spin button */}
-            <div className="mt-3 flex items-stretch gap-3">
-              <div className="flex flex-col items-center justify-center rounded-lg bg-black px-3 py-1">
-                <span className="text-[9px] font-bold tracking-widest text-[#8a8a92] uppercase">
-                  Spins
-                </span>
-                <span className="font-mono text-2xl leading-none font-bold text-amber-400 [text-shadow:0_0_8px_rgba(251,191,36,0.7)]">
-                  {spinsLeft ?? "–"}
-                </span>
+              {/* Controls: spin counter + spin button */}
+              <div className="mt-2.5 flex items-stretch gap-2.5">
+                <div className="flex flex-col items-center justify-center rounded-lg bg-black px-3 py-1">
+                  <span className="text-[9px] font-bold tracking-widest text-[#8a8a92] uppercase">
+                    Spins
+                  </span>
+                  <span className="font-mono text-2xl leading-none font-bold text-amber-400 [text-shadow:0_0_8px_rgba(251,191,36,0.7)]">
+                    {spinsLeft ?? "–"}
+                  </span>
+                </div>
+                <CoinSlot
+                  ref={slotRef}
+                  credited={credited}
+                  hint={slotHint}
+                  canReturn={!spinning}
+                  onReturn={returnCoin}
+                />
+                <Button
+                  size="lg"
+                  className="flex-1 gap-2"
+                  disabled={!canSpin}
+                  onClick={spin}
+                >
+                  <Dices className="size-5" />
+                  {spinning ? "Spinning…" : credited ? "Spin" : "Insert a Coin"}
+                </Button>
               </div>
-              <Button
-                size="lg"
-                className="flex-1 gap-2"
-                disabled={!canSpin}
-                onClick={spin}
-              >
-                <Dices className="size-5" />
-                {spinning ? "Spinning…" : "Spin"}
-              </Button>
             </div>
           </div>
-        </div>
 
-        {/* Pull lever: a second way to spin */}
-        <button
-          type="button"
-          aria-label="Pull the lever to spin"
-          disabled={!canSpin}
-          onClick={spin}
-          className="group absolute top-[22%] right-0 hidden h-[150px] w-10 disabled:cursor-not-allowed sm:block"
-        >
-          <motion.span
-            className="absolute bottom-6 left-1/2 w-2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#9a9aa2] via-[#f2f2f5] to-[#9a9aa2]"
-            style={{ height: rodHeight }}
-          />
-          <motion.span
-            className="absolute top-0 left-1/2 -ml-[13px] size-[26px] rounded-full bg-[radial-gradient(circle_at_35%_30%,#ff8a8a,#e11d2e_55%,#7a0a14)] shadow-lg group-enabled:group-hover:brightness-110"
-            style={{ y: knobY }}
-          />
-          <span className="absolute bottom-0 left-1/2 h-7 w-6 -translate-x-1/2 rounded-md bg-gradient-to-b from-[#3a3a42] to-[#16161a] ring-1 ring-[#a7791c]" />
-        </button>
+          <Lever theta={leverTheta} enabled={canSpin} onPull={spin} />
+        </div>
       </div>
 
       <div className="-mt-3 flex flex-col items-center gap-1">
@@ -289,52 +338,82 @@ export function RouletteSlot({
               ? "No Spins Remain Tonight"
               : `${spinsLeft} ${spinsLeft === 1 ? "Spin Remains" : "Spins Remain"} Tonight`}
         </p>
-        {blockedReason && !spinning && (
+        {!spinning && (
           <p role="status" className="text-center font-serif text-sm text-paper/80 italic">
-            {blockedReason}
+            {blockedReason ??
+              (credited
+                ? "Coin accepted. Now pull the lever all the way down."
+                : "Drop a coin in the slot, then pull the lever.")}
           </p>
+        )}
+        {credited && !spinning && (
+          <button
+            type="button"
+            onClick={returnCoin}
+            className="font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase underline-offset-4 hover:text-gold-light hover:underline"
+          >
+            ↩ Coin Return
+          </button>
         )}
       </div>
 
-      {result && (
-        <motion.div
-          key={`${result.id}-${spinsLeft}`}
-          className="flex w-full max-w-2xl flex-col items-center gap-6 sm:flex-row sm:items-start"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+      {result && !spinning && !resultOpen && (
+        <button
+          type="button"
+          onClick={() => setResultOpen(true)}
+          className="-mt-3 font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase underline-offset-4 hover:text-gold-light hover:underline"
         >
-          <motion.div
-            className="w-[180px] shrink-0"
-            initial={{ rotateY: 90 }}
-            animate={{ rotateY: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          >
-            <MovieCard movie={result} className="shadow-2xl shadow-black/60" />
-          </motion.div>
-          <div className="broadside w-full max-w-md px-5 py-4">
-            <MovieDetails movie={result} kicker="The Reels Have Spoken" />
-            <div className="mt-3 flex flex-col items-center gap-2">
-              {savedIds.has(result.id) ? (
-                <Button asChild className="gap-1.5">
-                  <Link href={`/watchlist?play=${result.id}`}>
-                    <Layers className="size-4" /> See It on the Table
-                  </Link>
-                </Button>
-              ) : (
-                <Button onClick={handleSave} disabled={saving} className="gap-1.5">
-                  <Bookmark className="size-4" /> {saving ? "Adding…" : "Add to Watch Deck"}
-                </Button>
-              )}
-              {saveFailed && (
-                <p role="alert" className="font-serif text-xs text-crimson italic">
-                  The house couldn&apos;t file it just now. Pray try again.
-                </p>
-              )}
-            </div>
-          </div>
-        </motion.div>
+          ✦ Your Pick: {result.title} ✦
+        </button>
       )}
+
+      <Dialog open={resultOpen && result !== null} onOpenChange={setResultOpen}>
+        {/* A bare frame around the card and placard, so the dialog's own
+            card styling doesn't fight the paper. */}
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto border-0 bg-transparent p-3 text-ink shadow-none">
+          {result && (
+            <motion.div
+              key={`${result.id}-${spinsLeft}`}
+              className="flex flex-col items-center gap-5 sm:flex-row sm:items-start"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            >
+              <DialogTitle className="sr-only">Your pick: {result.title}</DialogTitle>
+              <DialogDescription className="sr-only">The reels landed on {result.title}.</DialogDescription>
+              <motion.div
+                className="w-[160px] shrink-0"
+                initial={{ rotateY: 90 }}
+                animate={{ rotateY: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              >
+                <MovieCard movie={result} className="shadow-2xl shadow-black/60" />
+              </motion.div>
+              <div className="broadside w-full px-5 py-4">
+                <MovieDetails movie={result} kicker="The Reels Have Spoken" />
+                <div className="mt-3 flex flex-col items-center gap-2">
+                  {savedIds.has(result.id) ? (
+                    <Button asChild className="gap-1.5">
+                      <Link href={`/watchlist?play=${result.id}`}>
+                        <Layers className="size-4" /> See It on the Table
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSave} disabled={saving} className="gap-1.5">
+                      <Bookmark className="size-4" /> {saving ? "Adding…" : "Add to Watch Deck"}
+                    </Button>
+                  )}
+                  {saveFailed && (
+                    <p role="alert" className="font-serif text-xs text-crimson italic">
+                      The house couldn&apos;t file it just now. Pray try again.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -396,8 +475,8 @@ function ReelSymbol({ movie, won }: { movie: Movie; won: boolean }) {
         background: won ? `color-mix(in srgb, ${meta.color} 22%, transparent)` : undefined,
       }}
     >
-      <Icon className="size-8 shrink-0" style={{ color: meta.color }} strokeWidth={1.75} />
-      <p className="line-clamp-2 font-display text-[11px] leading-tight text-[#1c1b19] sm:text-xs">
+      <Icon className="size-6 shrink-0" style={{ color: meta.color }} strokeWidth={1.75} />
+      <p className="line-clamp-2 font-display text-[10px] leading-tight text-[#1c1b19] sm:text-[11px]">
         {movie.title}
       </p>
     </div>

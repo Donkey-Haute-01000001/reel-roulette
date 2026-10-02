@@ -190,3 +190,39 @@
     color: transparent;
   }
 }
+
+/* The Spin machine's coins: a flip onto the edge and back every so often,
+   a gentle bob, and a shadow that shrinks as the coin rises. */
+@keyframes coin-spin {
+  0%,
+  38%,
+  62%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.08);
+  }
+}
+
+@keyframes coin-shadow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(0.75);
+    opacity: 0.55;
+  }
+}
+
+@keyframes coin-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}

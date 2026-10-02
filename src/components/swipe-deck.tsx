@@ -38,7 +38,7 @@ const SWIPE_THRESHOLD = 110;
 
 // Sized off the window height (leaving room for the nav, header, filters and
 // buttons) so the whole swipe screen fits without scrolling.
-const CARD_HEIGHT = "clamp(260px, calc(100dvh - 476px), 440px)";
+const CARD_HEIGHT = "clamp(260px, calc(100dvh - 400px), 460px)";
 // The Discard / Keep piles either side of the card, at 42% of its size.
 const PILE_SCALE = 0.42;
 const PILE_WIDTH = `calc(${CARD_HEIGHT} * ${(5 / 7) * PILE_SCALE})`;

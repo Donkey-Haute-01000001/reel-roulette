@@ -38,21 +38,16 @@ export function BroadsideBanner({
   className?: string;
 }) {
   return (
-    <header className={cn("broadside mx-auto max-w-2xl px-5 py-3 text-center", className)}>
-      <p className="font-slab text-[10px] tracking-[0.3em] text-crimson uppercase">{kicker}</p>
-      <Ornament className="my-1 text-ink" />
+    <header className={cn("broadside mx-auto max-w-2xl px-5 py-2 text-center", className)}>
+      <p className="font-slab text-[9px] tracking-[0.3em] text-crimson uppercase">{kicker}</p>
+      <Ornament className="my-0.5 text-ink" />
       {lead && (
-        <p className="font-woodtype text-sm leading-tight tracking-wide uppercase sm:text-base">
+        <p className="font-woodtype text-xs leading-tight tracking-wide uppercase sm:text-sm">
           {lead}
         </p>
       )}
-      <h1 className="text-[1.75rem] leading-none tracking-wide uppercase sm:text-4xl">{title}</h1>
-      {subtitle && (
-        <>
-          <Ornament glyph="❦" className="my-1.5 text-ink" />
-          <p className="font-serif text-xs italic sm:text-sm">{subtitle}</p>
-        </>
-      )}
+      <h1 className="text-2xl leading-none tracking-wide uppercase sm:text-3xl">{title}</h1>
+      {subtitle && <p className="mt-1 font-serif text-[11px] italic sm:text-xs">{subtitle}</p>}
     </header>
   );
 }

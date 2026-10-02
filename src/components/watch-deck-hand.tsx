@@ -8,8 +8,8 @@ import { MovieCard } from "@/components/movie-card";
 
 // Cards are 120px wide in a small hand and shrink (down to 88px) as the hand
 // grows, so a big hand still fits with room for the hovered card.
-const MAX_CARD_W = 120;
-const MIN_CARD_W = 88;
+const MAX_CARD_W = 110;
+const MIN_CARD_W = 84;
 const MAX_SPREAD = 84; // px between card centres when there's room
 const LIFT = 56; // how far the hovered card rises out of the hand
 const HOVER_SCALE = 1.45;
