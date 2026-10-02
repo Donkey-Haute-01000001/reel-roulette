@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { StageCurtains } from "@/components/stage-curtains";
 
 // Victorian broadside woodtype set (see globals.css for how each is used).
 const fatface = Abril_Fatface({ variable: "--font-fatface", subsets: ["latin"], weight: "400" });
@@ -32,9 +33,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`dark ${fatface.variable} ${rye.variable} ${holtwood.variable} ${oldStandard.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SiteNav />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        {/* The stage: the curtains hang from under the nav to the foot of the
+            page. Nothing may make the page wider than the window (overflow-x
+            clip, which unlike hidden keeps the sticky nav working). */}
+        <div className="relative flex flex-1 flex-col overflow-x-clip">
+          <SiteNav />
+          <StageCurtains />
+          {/* Top padding clears the valance */}
+          <main className="flex-1 pt-10">{children}</main>
+          <SiteFooter />
+        </div>
       </body>
     </html>
   );

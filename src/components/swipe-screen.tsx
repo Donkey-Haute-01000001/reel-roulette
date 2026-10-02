@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Shuffle } from "lucide-react";
+import { Shuffle, Undo2 } from "lucide-react";
 
 import type { Genre, Movie } from "@/lib/types";
 import { EMPTY_FILTERS, applyFilters, type FilterState } from "@/lib/movie-filters";
@@ -94,9 +94,9 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
         onClick={shuffleSeenBackIn}
         disabled={clearing}
         className="gap-1.5"
-        title="Return every picture you've marked as seen to the deck"
+        title="Return every discarded picture to the deck"
       >
-        <Eye className="size-3.5" /> {clearing ? "Shuffling…" : `Shuffle Seen Back In (${seenCount})`}
+        <Undo2 className="size-3.5" /> {clearing ? "Shuffling…" : `Shuffle Discards Back In (${seenCount})`}
       </Button>
     ) : null;
 
@@ -130,7 +130,7 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
         emptyTitle={matching.length > 0 ? "All Spoken For" : "No Pictures Match"}
         emptyBody={
           matching.length > 0
-            ? "Every picture that matches is already in your Watch Deck or marked as seen."
+            ? "Every picture that matches is already kept in your Watch Deck or in the discard pile."
             : "Pray widen your genre or mood selections."
         }
         emptyAction={shuffleBackButton}

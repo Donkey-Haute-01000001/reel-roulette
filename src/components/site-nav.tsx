@@ -5,13 +5,10 @@ import { usePathname } from "next/navigation";
 import { Clapperboard, Menu, X } from "lucide-react";
 import * as React from "react";
 
+import { TABS } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
-  { href: "/", label: "Swipe" },
-  { href: "/watchlist", label: "Watch Deck" },
-  { href: "/roulette", label: "Spin" },
-];
+const LINKS = TABS;
 
 export function SiteNav() {
   const pathname = usePathname();

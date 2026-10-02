@@ -6,8 +6,10 @@ import { motion, useMotionValue, useSpring } from "motion/react";
 import type { Movie } from "@/lib/types";
 import { MovieCard } from "@/components/movie-card";
 
-const CARD_W = 120;
-const CARD_H = CARD_W * 1.4;
+// Cards are 120px wide in a small hand and shrink (down to 88px) as the hand
+// grows, so a big hand still fits with room for the hovered card.
+const MAX_CARD_W = 120;
+const MIN_CARD_W = 88;
 const MAX_SPREAD = 84; // px between card centres when there's room
 const LIFT = 56; // how far the hovered card rises out of the hand
 const HOVER_SCALE = 1.45;
@@ -49,22 +51,37 @@ export function WatchDeckHand({
   }, []);
 
   const n = movies.length;
-  // Squeeze the cards together as the hand grows, so it always fits.
-  const spread =
-    n > 1 ? Math.max(14, Math.min(MAX_SPREAD, ((width || 800) - CARD_W - 24) / (n - 1))) : 0;
+  const CARD_W = Math.round(Math.max(MIN_CARD_W, MAX_CARD_W - Math.max(0, n - 8) * 2.5));
+  const CARD_H = CARD_W * 1.4;
   const tilt = Math.min(5, 36 / Math.max(n, 1));
   const half = (n - 1) / 2;
   const arc = half > 0 ? 26 / (half * half) : 0; // edge cards sit ~26px lower
+  // How far a card reaches sideways from its centre line once tilted by
+  // `deg` about its bottom edge (its top outer corner swings outward).
+  const reach = (deg: number) => {
+    const r = (Math.abs(deg) * Math.PI) / 180;
+    return (CARD_W / 2) * Math.cos(r) + CARD_H * Math.sin(r);
+  };
+  const edgeTilt = half * tilt;
+  // Squeeze the cards together as the hand grows, so the whole fan — tilted
+  // outer cards included, every corner — always fits inside the hand.
+  const spread =
+    n > 1
+      ? Math.max(8, Math.min(MAX_SPREAD, ((width || 800) / 2 - 6 - reach(edgeTilt)) / half))
+      : 0;
   // Enough to uncover the neighbours of the enlarged card.
   const push = Math.max(18, (CARD_W * HOVER_SCALE) / 2 + 8 - spread);
 
   // Clamped: the hovered card may have just been played out of the hand.
   const rawActive = dragIndex ?? hoverIndex;
   const active = rawActive === null || n === 0 ? null : Math.min(rawActive, n - 1);
+  // Room below the cards for the outer ones, which sit lower on the arc and
+  // dip a bottom corner as they tilt.
+  const drop = 26 + (CARD_W / 2) * Math.sin((edgeTilt * Math.PI) / 180);
+  const baseline = Math.ceil(drop) + 8;
   // Just tall enough for the resting hand: the hovered card rises out of it,
-  // over the bottom of the table, like a hand in Hearthstone. Only the x
-  // axis is clipped, so a lifted card is never cut off.
-  const height = CARD_H + 36;
+  // over the bottom of the table, like a hand in Hearthstone.
+  const height = CARD_H + baseline + 20;
 
   const measure = () => {
     rectRef.current = containerRef.current?.getBoundingClientRect() ?? null;
@@ -91,7 +108,7 @@ export function WatchDeckHand({
     if (i !== hoverIndex) setHoverIndex(i);
 
     const cardCenterX = rect.left + rect.width / 2 + (i - half) * spread;
-    const cardCenterY = rect.top + height - 16 - CARD_H / 2 - LIFT;
+    const cardCenterY = rect.top + height - baseline - CARD_H / 2 - LIFT;
     const dx = Math.max(-1, Math.min(1, (e.clientX - cardCenterX) / (CARD_W / 2)));
     const dy = Math.max(-1, Math.min(1, (e.clientY - cardCenterY) / (CARD_H / 2)));
     tiltY.set(dx * 12);
@@ -109,7 +126,7 @@ export function WatchDeckHand({
       role="listbox"
       aria-label="Your hand"
       tabIndex={0}
-      className="relative w-full overflow-x-clip rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="relative w-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
       style={{ height }}
       onPointerEnter={measure}
       onPointerMove={handlePointerMove}
@@ -146,10 +163,11 @@ export function WatchDeckHand({
           const dist = Math.abs(i - active);
           x += Math.sign(i - active) * push * Math.max(0, 1 - (dist - 1) * 0.45);
         }
-        // Never let a card (or the enlarged hovered one) slide past the
-        // sides of the hand, where it would be clipped.
+        // Never let a card (tilted, pushed aside, or the enlarged hovered
+        // one) reach past the sides of the hand.
         if (width > 0) {
-          const edge = Math.max(0, width / 2 - (CARD_W * scale) / 2 - 4);
+          const extent = rotate === 0 ? (CARD_W * scale) / 2 : reach(rotate);
+          const edge = Math.max(0, width / 2 - extent - 4);
           x = Math.max(-edge, Math.min(edge, x));
         }
 
@@ -162,7 +180,7 @@ export function WatchDeckHand({
             className="absolute"
             style={{
               left: "50%",
-              bottom: 16,
+              bottom: baseline,
               marginLeft: -CARD_W / 2,
               width: CARD_W,
               transformOrigin: "50% 100%",

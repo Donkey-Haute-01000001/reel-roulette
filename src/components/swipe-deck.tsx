@@ -1,8 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { motion, useMotionValue, useTransform, AnimatePresence } from "motion/react";
-import { Bookmark, Eye, Info } from "lucide-react";
+import {
+  motion,
+  useMotionValue,
+  useMotionValueEvent,
+  useTransform,
+  AnimatePresence,
+} from "motion/react";
+import Link from "next/link";
+import { Bookmark, Info, X } from "lucide-react";
 
 import type { Movie } from "@/lib/types";
 import { MovieCard } from "@/components/movie-card";
@@ -18,7 +25,7 @@ import { MoviePoster } from "@/components/movie-poster";
 import { CardBack } from "@/components/card-back";
 import { addToWatchlist } from "@/lib/watchlist-client";
 import { markSeen } from "@/lib/seen-client";
-import { shuffle } from "@/lib/utils";
+import { cn, shuffle } from "@/lib/utils";
 
 // A fresh shuffled pass over the whole pool, only ever built once the
 // previous bag is exhausted — never a partial reshuffle while cards from
@@ -37,7 +44,12 @@ const SWIPE_THRESHOLD = 110;
 
 // Sized off the window height (leaving room for the nav, header, filters and
 // buttons) so the whole swipe screen fits without scrolling.
-const CARD_HEIGHT = "clamp(260px, calc(100dvh - 440px), 440px)";
+const CARD_HEIGHT = "clamp(260px, calc(100dvh - 476px), 440px)";
+// The Discard / Keep piles either side of the card, at 42% of its size.
+const PILE_SCALE = 0.42;
+const PILE_WIDTH = `calc(${CARD_HEIGHT} * ${(5 / 7) * PILE_SCALE})`;
+
+type ExitTarget = { x: number; y: number; scale: number; rotate: number };
 
 // Shuffling uses Math.random(), which necessarily differs between the
 // server-rendered pass and the client's hydration pass — so the *first*
@@ -90,6 +102,15 @@ export function SwipeDeck({
   // your Watch Deck and seen ones are recorded as seen, so neither is dealt
   // again in a later pass.
   const [playedHere, setPlayedHere] = React.useState<Set<number>>(() => new Set());
+  // Swiped cards land face-up on a pile: Discard on the left, Keep on the right.
+  const [seenPile, setSeenPile] = React.useState<Movie[]>([]);
+  const [savedPile, setSavedPile] = React.useState<Movie[]>([]);
+  // Where the exiting card flies to: onto its pile, or (with the piles
+  // hidden on small screens) off the side of the screen.
+  const [exitTarget, setExitTarget] = React.useState<ExitTarget | null>(null);
+  const cardAreaRef = React.useRef<HTMLDivElement>(null);
+  const seenPileRef = React.useRef<HTMLDivElement>(null);
+  const savedPileRef = React.useRef<HTMLDivElement>(null);
 
   // Rebuild the queue whenever the filtered movie pool changes. (Adjusting
   // state during render, per React's guidance, rather than in an effect —
@@ -134,6 +155,22 @@ export function SwipeDeck({
   const commitSwipe = React.useCallback(
     (direction: "left" | "right") => {
       if (phase !== "idle" || !current) return;
+
+      const pile = (direction === "right" ? savedPileRef : seenPileRef).current;
+      const area = cardAreaRef.current;
+      let target: ExitTarget | null = null;
+      // offsetParent is null while the piles are display:none (small screens).
+      if (pile && area && pile.offsetParent !== null) {
+        const a = area.getBoundingClientRect();
+        const p = pile.getBoundingClientRect();
+        target = {
+          x: p.left + p.width / 2 - (a.left + a.width / 2),
+          y: p.top + p.height / 2 - (a.top + a.height / 2),
+          scale: p.width / a.width,
+          rotate: direction === "right" ? 6 : -6,
+        };
+      }
+      setExitTarget(target);
       setPhase("exiting");
       setExitDirection(direction);
       setExitingMovie(current);
@@ -146,7 +183,7 @@ export function SwipeDeck({
         void addToWatchlist(current.id);
         onSave?.(current);
       } else {
-        setToast(`"${current.title}" · Already Seen`);
+        setToast(`"${current.title}" · Discarded`);
         void markSeen(current.id);
         onSeen?.(current);
       }
@@ -170,10 +207,15 @@ export function SwipeDeck({
   // drag-elastic snap-back racing the exit) can't advance the deck twice.
   const finishExit = React.useCallback(() => {
     if (phase !== "exiting") return;
+    // The card has landed: it now lives on top of its pile.
+    if (exitingMovie) {
+      if (exitDirection === "right") setSavedPile((pile) => [...pile, exitingMovie]);
+      else setSeenPile((pile) => [...pile, exitingMovie]);
+    }
     setPhase("idle");
     setExitDirection(null);
     setExitingMovie(null);
-  }, [phase]);
+  }, [phase, exitingMovie, exitDirection]);
 
   if (loading) {
     return (
@@ -206,18 +248,31 @@ export function SwipeDeck({
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative mx-auto aspect-[5/7]" style={{ height: CARD_HEIGHT }}>
-        <AnimatePresence initial={false}>
-          {displayedMovie && (
-            <SwipeCard
-              key={displayedMovie.id}
-              movie={displayedMovie}
-              exiting={phase === "exiting" ? exitDirection : null}
-              onExitComplete={finishExit}
-              onSwipeStart={commitSwipe}
-            />
-          )}
-        </AnimatePresence>
+      <div className="flex items-center justify-center gap-8 lg:gap-14">
+        <Pile pileRef={seenPileRef} cards={seenPile} label="Discard" tone="crimson" rotate={-6} />
+        <div ref={cardAreaRef} className="relative mx-auto aspect-[5/7]" style={{ height: CARD_HEIGHT }}>
+          <AnimatePresence initial={false}>
+            {displayedMovie && (
+              <SwipeCard
+                key={displayedMovie.id}
+                movie={displayedMovie}
+                exiting={phase === "exiting" ? exitDirection : null}
+                exitTarget={exitTarget}
+                onExitComplete={finishExit}
+                onSwipeStart={commitSwipe}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+        <Pile
+          pileRef={savedPileRef}
+          cards={savedPile}
+          label="Keep"
+          tone="felt"
+          rotate={6}
+          href="/watchlist"
+          linkLabel="Go to your Watch Deck"
+        />
       </div>
 
       <div className="mt-4 flex items-center justify-center gap-4">
@@ -225,11 +280,11 @@ export function SwipeDeck({
           size="icon"
           variant="outline"
           className="size-12 border-ink/60 bg-paper text-crimson hover:bg-paper-deep"
-          aria-label="Seen it"
+          aria-label="Discard"
           disabled={!displayedMovie || phase !== "idle"}
           onClick={() => commitSwipe("left")}
         >
-          <Eye className="size-6" />
+          <X className="size-6" />
         </Button>
         <Button
           size="icon"
@@ -243,7 +298,7 @@ export function SwipeDeck({
         <Button
           size="icon"
           className="size-12 border-gold bg-felt text-paper hover:brightness-115"
-          aria-label="Save to Watch Deck"
+          aria-label="Keep in your Watch Deck"
           disabled={!displayedMovie || phase !== "idle"}
           onClick={() => commitSwipe("right")}
         >
@@ -291,19 +346,89 @@ export function SwipeDeck({
   );
 }
 
+// A pile of swiped cards beside the deck, top card face-up. Hidden on
+// small screens, where swiped cards fly off the side instead.
+function Pile({
+  pileRef,
+  cards,
+  label,
+  tone,
+  rotate,
+  href,
+  linkLabel,
+}: {
+  pileRef: React.RefObject<HTMLDivElement | null>;
+  cards: Movie[];
+  label: string;
+  tone: "crimson" | "felt";
+  rotate: number;
+  href?: string;
+  linkLabel?: string;
+}) {
+  const top = cards[cards.length - 1];
+  const body = (
+    <>
+      {/* Measured for the landing animation, so it stays unrotated. */}
+      <div ref={pileRef} className="relative aspect-[5/7]" style={{ width: PILE_WIDTH }}>
+        {top ? (
+          <div className="absolute inset-0" style={{ rotate: `${rotate}deg` }}>
+            {cards.length > 1 && (
+              <div
+                className="card-stock absolute inset-0 rounded-[6%/4.3%] border border-[#d3c39f] shadow-md"
+                style={{ rotate: `${-rotate * 0.8}deg`, translate: `${-rotate * 0.4}px 3px` }}
+              />
+            )}
+            <MovieCard movie={top} className="shadow-[0_8px_18px_rgb(0_0_0/0.5)]" />
+          </div>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center rounded-[8px] border-2 border-dashed border-gold/45 p-2 text-center">
+            <span className="font-slab text-[8px] leading-relaxed tracking-[0.18em] text-gold-light/70 uppercase">
+              {label}
+            </span>
+          </div>
+        )}
+      </div>
+      <span
+        className={cn(
+          "font-slab text-[9px] tracking-[0.18em] uppercase",
+          tone === "crimson" ? "text-[#e8857f]" : "text-[#8fd3a6]"
+        )}
+      >
+        {label} · {cards.length}
+      </span>
+    </>
+  );
+
+  const className = "hidden flex-col items-center gap-3 sm:flex";
+  return href ? (
+    <Link href={href} className={cn(className, "group transition-transform hover:-translate-y-1")} aria-label={linkLabel}>
+      {body}
+    </Link>
+  ) : (
+    <div className={className}>{body}</div>
+  );
+}
+
 function SwipeCard({
   movie,
   exiting,
+  exitTarget,
   onExitComplete,
   onSwipeStart,
 }: {
   movie: Movie;
   exiting: "left" | "right" | null;
+  exitTarget: ExitTarget | null;
   onExitComplete: (direction: "left" | "right") => void;
   onSwipeStart: (direction: "left" | "right") => void;
 }) {
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 300], [-18, 18]);
+  // Tilt follows the drag until the swipe is committed; from then on the
+  // exit animation owns it (a derived value would fight that animation).
+  const rotate = useMotionValue(0);
+  useMotionValueEvent(x, "change", (v) => {
+    if (!exiting) rotate.set(Math.max(-18, Math.min(18, (v / 300) * 18)));
+  });
   const saveOpacity = useTransform(x, [20, 120], [0, 1]);
   const skipOpacity = useTransform(x, [-120, -20], [1, 0]);
 
@@ -317,15 +442,25 @@ function SwipeCard({
       initial={{ scale: 0.95, opacity: 0, y: 10 }}
       animate={
         exiting
-          ? {
-              x: exiting === "right" ? 700 : -700,
-              rotate: exiting === "right" ? 24 : -24,
-              opacity: 0,
-              transition: { duration: 0.35, ease: "easeIn" },
-            }
+          ? exitTarget
+            ? {
+                // Fly onto the pile, shrinking to the pile's size as it lands.
+                x: exitTarget.x,
+                y: exitTarget.y,
+                scale: exitTarget.scale,
+                rotate: exitTarget.rotate,
+                transition: { duration: 0.42, ease: [0.45, 0, 0.2, 1] },
+              }
+            : {
+                x: exiting === "right" ? 700 : -700,
+                rotate: exiting === "right" ? 24 : -24,
+                opacity: 0,
+                transition: { duration: 0.35, ease: "easeIn" },
+              }
           : { scale: 1, opacity: 1, y: 0, transition: { duration: 0.25 } }
       }
-      exit={{ opacity: 0 }}
+      // Gone instantly once landed: the pile is already showing this card.
+      exit={{ opacity: 0, transition: { duration: exitTarget ? 0 : 0.2 } }}
       onAnimationComplete={() => {
         if (exiting) onExitComplete(exiting);
       }}
@@ -334,18 +469,25 @@ function SwipeCard({
         else if (info.offset.x < -SWIPE_THRESHOLD) onSwipeStart("left");
       }}
     >
-      <motion.span
-        style={{ opacity: saveOpacity }}
-        className="absolute top-[12%] left-4 z-10 -rotate-12 rounded-[3px] border-4 border-double border-felt bg-paper/80 px-2 py-0.5 font-woodtype text-lg text-felt"
+      {/* The stamps fade as the card takes off for its pile */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-10"
+        animate={{ opacity: exiting ? 0 : 1 }}
+        transition={{ duration: 0.15 }}
       >
-        SAVE
-      </motion.span>
-      <motion.span
-        style={{ opacity: skipOpacity }}
-        className="absolute top-[12%] right-4 z-10 rotate-12 rounded-[3px] border-4 border-double border-crimson bg-paper/80 px-2 py-0.5 font-woodtype text-lg text-crimson"
-      >
-        SEEN
-      </motion.span>
+        <motion.span
+          style={{ opacity: saveOpacity }}
+          className="absolute top-[12%] left-4 z-10 -rotate-12 rounded-[3px] border-4 border-double border-felt bg-paper/80 px-2 py-0.5 font-woodtype text-lg text-felt"
+        >
+          KEEP
+        </motion.span>
+        <motion.span
+          style={{ opacity: skipOpacity }}
+          className="absolute top-[12%] right-4 z-10 rotate-12 rounded-[3px] border-4 border-double border-crimson bg-paper/80 px-2 py-0.5 font-woodtype text-lg text-crimson"
+        >
+          DISCARD
+        </motion.span>
+      </motion.div>
       <MovieCard movie={movie} className="shadow-2xl" />
     </motion.div>
   );
