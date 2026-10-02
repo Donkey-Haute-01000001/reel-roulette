@@ -2,31 +2,49 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Dices, Hand, LayoutGrid, Layers, Shuffle, Trash2 } from "lucide-react";
+import { motion } from "motion/react";
+import { Bookmark, Shuffle, Trash2, Undo2, X } from "lucide-react";
 
-import type { Genre, Movie, WatchlistEntry } from "@/lib/types";
+import type { Movie, WatchlistEntry } from "@/lib/types";
 import { addToWatchlist, fetchWatchlist, removeFromWatchlist } from "@/lib/watchlist-client";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { EMPTY_FILTERS, applyFilters } from "@/lib/movie-filters";
-import { FilterBar } from "@/components/filter-bar";
+import { BroadsideBanner } from "@/components/broadside";
+import { CardBack } from "@/components/card-back";
+import { CasinoTable } from "@/components/casino-table";
 import { MovieCard } from "@/components/movie-card";
-import { RouletteSlot } from "@/components/roulette-slot";
-import { WatchDeckFan } from "@/components/watch-deck-fan";
-import { Badge } from "@/components/ui/badge";
+import { MovieDetails } from "@/components/movie-details";
+import { WatchDeckHand } from "@/components/watch-deck-hand";
 import { Button } from "@/components/ui/button";
-import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shuffle } from "@/lib/utils";
 
-type View = "fan" | "grid";
+// Where the card on the table came from:
+// - "hand":  played face-up from your hand (slides up from below)
+// - "deck":  dealt face-down off your deck on the felt (flies in from the right, flips)
+// - "house": Hit me — a card you haven't saved yet (flies in from the dealer's side, flips)
+type Source = "hand" | "deck" | "house";
 
-export function WatchDeckScreen({ catalog, genres }: { catalog: Movie[]; genres: Genre[] }) {
+const DEAL_FROM: Record<Source, { x: number; y: number; rotate: number; scale: number }> = {
+  hand: { x: 0, y: 220, rotate: -12, scale: 0.6 },
+  deck: { x: 420, y: -30, rotate: 28, scale: 0.45 },
+  house: { x: 0, y: -280, rotate: -24, scale: 0.45 },
+};
+
+export function WatchDeckScreen({
+  catalog,
+  initialPlayId = null,
+}: {
+  catalog: Movie[];
+  initialPlayId?: number | null;
+}) {
   const [entries, setEntries] = React.useState<WatchlistEntry[] | null>(null);
-  const [view, setView] = React.useState<View>("fan");
-  const [focusIndex, setFocusIndex] = React.useState(0);
-  const [highlightKey, setHighlightKey] = React.useState(0);
-  const [pickOpen, setPickOpen] = React.useState(false);
-  const [pickFilters, setPickFilters] = React.useState(EMPTY_FILTERS);
+  const [table, setTable] = React.useState<{ movie: Movie; from: Source } | null>(null);
+  // A card asked for by the URL (e.g. after adding a Spin result), played
+  // to the table once the Watch Deck has loaded.
+  const [pendingPlayId, setPendingPlayId] = React.useState<number | null>(initialPlayId);
+  // Bumped on every play so re-dealing the same card still animates in.
+  const [dealKey, setDealKey] = React.useState(0);
+  const [adding, setAdding] = React.useState(false);
 
   const load = React.useCallback(() => {
     fetchWatchlist().then(setEntries);
@@ -38,179 +56,210 @@ export function WatchDeckScreen({ catalog, genres }: { catalog: Movie[]; genres:
 
   const movies = React.useMemo(() => (entries ?? []).map((e) => e.movies), [entries]);
   const savedIds = React.useMemo(() => new Set(movies.map((m) => m.id)), [movies]);
-  const pickPool = React.useMemo(() => applyFilters(movies, pickFilters), [movies, pickFilters]);
 
-  // Keep the focus in range as cards are removed.
-  const safeFocus = Math.min(focusIndex, Math.max(0, movies.length - 1));
+  const pendingMovie =
+    pendingPlayId !== null ? (movies.find((m) => m.id === pendingPlayId) ?? null) : null;
+  const onTable = table ?? (pendingMovie ? { movie: pendingMovie, from: "hand" as const } : null);
+  const inDeck = onTable !== null && savedIds.has(onTable.movie.id);
+
+  const hand = React.useMemo(
+    () => movies.filter((m) => m.id !== onTable?.movie.id),
+    [movies, onTable?.movie.id]
+  );
+  // Hit me draws only from pictures you haven't saved yet.
+  const housePool = React.useMemo(
+    () => catalog.filter((m) => !savedIds.has(m.id) && m.id !== onTable?.movie.id),
+    [catalog, savedIds, onTable?.movie.id]
+  );
+
+  const play = (movie: Movie, from: Source) => {
+    setTable({ movie, from });
+    setPendingPlayId(null);
+    setDealKey((k) => k + 1);
+  };
+
+  const clearTable = () => {
+    setTable(null);
+    setPendingPlayId(null);
+  };
+
+  const hitMe = () => {
+    if (housePool.length > 0) play(shuffle(housePool)[0], "house");
+  };
+
+  const dealFromHand = () => {
+    if (hand.length > 0) play(shuffle(hand)[0], "deck");
+  };
 
   const handleRemove = async (movieId: number) => {
+    clearTable();
     setEntries((prev) => (prev ? prev.filter((e) => e.movie_id !== movieId) : prev));
     await removeFromWatchlist(movieId);
   };
 
-  const handleSave = async (movie: Movie) => {
+  // Keeps the card on the table; it just becomes one of yours.
+  const handleAdd = async (movie: Movie) => {
+    setAdding(true);
     if (await addToWatchlist(movie.id)) load();
+    setAdding(false);
   };
 
-  // Draw a random card from `pool` and reveal it in the fan. Avoids
-  // re-drawing the card that's already focused when there's any choice.
-  const draw = (pool: Movie[]) => {
-    if (pool.length === 0) return;
-    const current = movies[safeFocus];
-    const candidates = pool.length > 1 ? pool.filter((m) => m.id !== current?.id) : pool;
-    const picked = shuffle(candidates)[0];
-    setView("fan");
-    setFocusIndex(movies.findIndex((m) => m.id === picked.id));
-    setHighlightKey((k) => k + 1);
-  };
+  const from = onTable?.from ?? "hand";
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <div className="mb-8 text-center">
-        <Badge className="mb-3">
-          <Layers className="size-3" /> Your Watch Deck
-        </Badge>
-        <h1 className="text-4xl font-black sm:text-5xl">Your hand of picks</h1>
-        <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-          Every card you&apos;ve saved, on this browser only. Flip through them, draw one at
-          random, or take your chances on the Roulette below.
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+      <BroadsideBanner
+        className="mb-5"
+        kicker="The Card Room"
+        lead="Your Personal"
+        title="Watch Deck"
+        subtitle="Survey Your Hand · Deal Yourself a Card · Or Ask the Dealer to “Hit Me”"
+      />
 
       {!isSupabaseConfigured && (
-        <p className="mx-auto mb-8 max-w-xl rounded-xl border border-dashed border-border bg-card px-4 py-3 text-center text-sm text-muted-foreground">
+        <p className="broadside mx-auto mb-6 max-w-xl px-4 py-3 text-center font-serif text-sm">
           Connect a Supabase project to enable the Watch Deck.
         </p>
       )}
 
-      {entries === null && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 rounded-2xl" />
-          ))}
-        </div>
-      )}
-
-      {entries !== null && entries.length === 0 && (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-20 text-center">
-          <p className="font-display text-xl font-bold">Your Watch Deck is empty</p>
-          <p className="max-w-xs text-sm text-muted-foreground">
-            Swipe right on the roulette to add cards, or spin the whole catalog below.
-          </p>
-          <Button asChild>
-            <Link href="/">Start swiping</Link>
-          </Button>
-        </div>
-      )}
-
-      {entries !== null && entries.length > 0 && (
-        <section aria-label="Watch Deck">
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
-            <Segmented
-              label="Watch Deck layout"
-              value={view}
-              onChange={setView}
-              options={[
-                { value: "fan", label: <><Hand /> Fan</> },
-                { value: "grid", label: <><LayoutGrid /> Grid</> },
-              ]}
-            />
-            <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => draw(movies)}>
-              <Shuffle className="size-3.5" /> Hit me
-            </Button>
-            <Button
-              variant={pickOpen ? "default" : "outline"}
-              size="sm"
-              className="gap-1.5"
-              aria-expanded={pickOpen}
-              onClick={() => setPickOpen((v) => !v)}
-            >
-              <Layers className="size-3.5" /> Pick a card
-            </Button>
+      {entries === null ? (
+        <Skeleton className="h-[290px] rounded-[48px] sm:rounded-[140px]" />
+      ) : (
+        <>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="font-slab text-[10px] tracking-[0.2em] text-gold-light uppercase">
+              {hand.length} {hand.length === 1 ? "Card" : "Cards"} in Hand
+            </p>
+            <HitMeButton onClick={hitMe} disabled={housePool.length === 0} />
           </div>
 
-          {pickOpen && (
-            <div className="mx-auto mb-6 flex max-w-3xl flex-col items-center gap-3 rounded-2xl border border-border bg-card p-4">
-              <FilterBar genres={genres} value={pickFilters} onChange={setPickFilters} />
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  {pickPool.length} of {movies.length} cards match
-                </span>
-                <Button
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={pickPool.length === 0}
-                  onClick={() => draw(pickPool)}
+          <CasinoTable deckCount={hand.length} onDeal={dealFromHand}>
+            {onTable ? (
+              <>
+                <motion.div
+                  key={`${onTable.movie.id}-${dealKey}`}
+                  className="w-[150px] shrink-0 [perspective:900px] sm:w-[160px]"
+                  initial={{ ...DEAL_FROM[from], opacity: 0 }}
+                  animate={{ x: 0, y: 0, scale: 1, rotate: -3, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 240, damping: 24 }}
                 >
-                  <Dices className="size-3.5" /> Draw
-                </Button>
-              </div>
-              {pickPool.length === 0 && (
-                <p role="status" className="text-sm text-muted-foreground">
-                  No cards in your Watch Deck match these filters.
-                </p>
-              )}
-            </div>
-          )}
-
-          {view === "fan" ? (
-            <div className="flex flex-col items-center">
-              <WatchDeckFan
-                movies={movies}
-                focusIndex={safeFocus}
-                onFocusChange={setFocusIndex}
-                highlightKey={highlightKey}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
-                onClick={() => handleRemove(movies[safeFocus].id)}
-              >
-                <Trash2 className="size-3.5" /> Remove card
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {movies.map((movie) => (
-                <div key={movie.id} className="flex flex-col gap-2">
-                  <MovieCard movie={movie} size="compact" className="h-[390px]" />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
-                    onClick={() => handleRemove(movie.id)}
+                  <motion.div
+                    className="relative [transform-style:preserve-3d]"
+                    initial={{ rotateY: from === "hand" ? 0 : 180 }}
+                    animate={{ rotateY: 0 }}
+                    transition={{ duration: 0.65, delay: 0.12, ease: [0.3, 0.7, 0.3, 1] }}
                   >
-                    <Trash2 className="size-3.5" /> Remove
-                  </Button>
+                    <div className="[backface-visibility:hidden]">
+                      <MovieCard
+                        movie={onTable.movie}
+                        className="shadow-[0_14px_30px_rgb(0_0_0/0.55)]"
+                      />
+                    </div>
+                    {from !== "hand" && (
+                      <div className="absolute inset-0 [transform:rotateY(180deg)] [backface-visibility:hidden]">
+                        <CardBack className="shadow-[0_14px_30px_rgb(0_0_0/0.55)]" />
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+                <motion.div
+                  key={`details-${onTable.movie.id}-${dealKey}`}
+                  className="broadside w-full max-w-md px-5 py-4"
+                  initial={{ opacity: 0, y: 12, rotate: 1 }}
+                  animate={{ opacity: 1, y: 0, rotate: 0.6 }}
+                  transition={{ delay: 0.15, duration: 0.35 }}
+                >
+                  <MovieDetails
+                    movie={onTable.movie}
+                    kicker={inDeck ? "On the Table" : "Fresh from the House"}
+                  />
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {inDeck ? (
+                      <>
+                        <Button variant="secondary" size="sm" className="gap-1.5" onClick={clearTable}>
+                          <Undo2 className="size-3.5" /> Back to Hand
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="gap-1.5 border-crimson/60 bg-transparent text-crimson shadow-none hover:bg-crimson/10"
+                          onClick={() => handleRemove(onTable.movie.id)}
+                        >
+                          <Trash2 className="size-3.5" /> Strike from Deck
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={adding}
+                          onClick={() => handleAdd(onTable.movie)}
+                        >
+                          <Bookmark className="size-3.5" /> {adding ? "Adding…" : "Add to Watch Deck"}
+                        </Button>
+                        <Button variant="secondary" size="sm" className="gap-1.5" onClick={clearTable}>
+                          <X className="size-3.5" /> Discard
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="flex aspect-[5/7] w-[120px] items-center justify-center rounded-[10px] border-2 border-dashed border-gold/60 p-3">
+                  <span className="font-slab text-[10px] leading-relaxed tracking-[0.2em] text-gold-light/80 uppercase">
+                    Play a Card Here
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+                <p className="max-w-xs font-serif text-sm text-gold-light/80 italic">
+                  {movies.length > 0
+                    ? "Lay a card from your hand upon the felt, or deal one from your deck."
+                    : "Your deck stands empty. Call upon the dealer to Hit Me for a fresh card."}
+                </p>
+              </div>
+            )}
+          </CasinoTable>
 
-      <section id="roulette" aria-labelledby="roulette-heading" className="mt-16 border-t border-border pt-12">
-        <div className="mb-6 text-center">
-          <Badge className="mb-3">
-            <Dices className="size-3" /> Roulette
-          </Badge>
-          <h2 id="roulette-heading" className="text-3xl font-black sm:text-4xl">
-            Let the reels decide
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Three reels, one movie. Spin your Watch Deck or the whole catalog, and line up
-            tonight&apos;s pick. You get three spins a day.
-          </p>
-        </div>
-        <RouletteSlot
-          deckMovies={movies}
-          catalog={catalog}
-          genres={genres}
-          savedIds={savedIds}
-          onSave={handleSave}
-        />
-      </section>
+          <div className="mt-2">
+            {movies.length > 0 ? (
+              <WatchDeckHand movies={hand} onPlay={(movie) => play(movie, "hand")} />
+            ) : (
+              <p className="py-10 text-center font-serif text-sm text-paper/70 italic">
+                Your hand is empty.{" "}
+                <Link href="/" className="text-gold-light underline underline-offset-4">
+                  Swipe right
+                </Link>{" "}
+                on a few pictures to be dealt in.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Hit me, with a small printed notice explaining it on hover / focus.
+function HitMeButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  const tipId = React.useId();
+
+  return (
+    <div className="group relative">
+      <Button size="sm" className="gap-1.5" onClick={onClick} disabled={disabled} aria-describedby={tipId}>
+        <Shuffle className="size-3.5" /> Hit Me
+      </Button>
+      <div
+        id={tipId}
+        role="tooltip"
+        className="broadside pointer-events-none absolute top-full right-0 z-50 mt-3 w-64 px-3 py-2 text-left font-serif text-xs leading-snug opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
+      >
+        <span className="font-slab text-[9px] tracking-[0.2em] text-crimson uppercase">Hit Me</span>
+        <br />
+        {disabled
+          ? "Every picture in the house already sits in your deck. The dealer has nothing new to offer."
+          : "The dealer draws a fresh card from the house, a picture not yet in your Watch Deck. Should it please you, add it to your deck."}
+      </div>
     </div>
   );
 }

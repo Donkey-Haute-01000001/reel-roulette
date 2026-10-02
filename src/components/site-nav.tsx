@@ -8,8 +8,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { href: "/", label: "Roulette" },
+  { href: "/", label: "Swipe" },
   { href: "/watchlist", label: "Watch Deck" },
+  { href: "/roulette", label: "Spin" },
 ];
 
 export function SiteNav() {
@@ -17,14 +18,14 @@ export function SiteNav() {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-40 border-b-4 border-double border-gold/80 bg-[#081a10] shadow-[0_6px_20px_rgb(0_0_0/0.5)]">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Clapperboard className="size-5" />
+          <span className="flex size-9 items-center justify-center rounded-full border-2 border-gold bg-crimson text-paper shadow-[inset_0_0_0_2px_rgb(0_0_0/0.25)]">
+            <Clapperboard className="size-4" />
           </span>
-          <span className="font-display text-lg font-extrabold tracking-tight">
-            REEL<span className="text-primary">ROULETTE</span>
+          <span className="gold-leaf font-woodtype text-lg tracking-wide sm:text-xl">
+            Reel Roulette
           </span>
         </Link>
 
@@ -34,10 +35,10 @@ export function SiteNav() {
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-full px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors",
+                "rounded-[3px] border px-3.5 py-1.5 font-slab text-[11px] tracking-[0.14em] uppercase transition-colors",
                 pathname === link.href
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "border-gold bg-crimson text-paper shadow-[inset_0_0_0_2px_rgb(0_0_0/0.22)]"
+                  : "border-transparent text-paper/75 hover:text-gold-light"
               )}
             >
               {link.label}
@@ -55,17 +56,17 @@ export function SiteNav() {
       </div>
 
       {open && (
-        <nav className="flex flex-col gap-1 border-t border-border px-4 py-3 sm:hidden">
+        <nav className="flex flex-col gap-1 border-t border-gold/40 px-4 py-3 sm:hidden">
           {LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
               className={cn(
-                "rounded-full px-4 py-2 text-sm font-bold uppercase tracking-wide",
+                "rounded-[3px] border px-4 py-2 font-slab text-xs tracking-[0.14em] uppercase",
                 pathname === link.href
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground"
+                  ? "border-gold bg-crimson text-paper"
+                  : "border-transparent text-paper/75"
               )}
             >
               {link.label}

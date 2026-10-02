@@ -12,10 +12,10 @@ export type FilterState = {
 export const EMPTY_FILTERS: FilterState = { genres: [], mood: "any", maxRuntime: "any" };
 
 export const RUNTIME_OPTIONS = [
-  { label: "Any length", value: "any" },
-  { label: "Under 100 min", value: "100" },
-  { label: "Under 130 min", value: "130" },
-  { label: "Under 160 min", value: "160" },
+  { label: "Any Length", value: "any" },
+  { label: "Under 100 Minutes", value: "100" },
+  { label: "Under 130 Minutes", value: "130" },
+  { label: "Under 160 Minutes", value: "160" },
 ];
 
 export function hasActiveFilters(f: FilterState): boolean {

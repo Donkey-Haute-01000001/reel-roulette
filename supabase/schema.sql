@@ -130,3 +130,27 @@ create policy "public upsert" on public.roulette_spins for insert with check (tr
 
 drop policy if exists "public update" on public.roulette_spins;
 create policy "public update" on public.roulette_spins for update using (true);
+
+-- ---------------------------------------------------------------------------
+-- seen_movies: pictures a visitor swiped left on ("already seen"), so the
+-- Swipe deck stops dealing them. Same anonymous session id as the watchlist;
+-- the visitor can shuffle them back in, which deletes their rows.
+-- ---------------------------------------------------------------------------
+create table if not exists public.seen_movies (
+  session_id text not null,
+  movie_id   bigint not null references public.movies (id) on delete cascade,
+  seen_at    timestamptz not null default now(),
+  primary key (session_id, movie_id)
+);
+
+alter table public.seen_movies enable row level security;
+
+-- Same open demo access model as the watchlist (no auth system here).
+drop policy if exists "public read" on public.seen_movies;
+create policy "public read" on public.seen_movies for select using (true);
+
+drop policy if exists "public insert" on public.seen_movies;
+create policy "public insert" on public.seen_movies for insert with check (true);
+
+drop policy if exists "public delete" on public.seen_movies;
+create policy "public delete" on public.seen_movies for delete using (true);

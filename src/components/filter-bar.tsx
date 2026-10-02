@@ -43,8 +43,8 @@ export function FilterBar({
   };
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="flex flex-wrap justify-center gap-2">
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5">
         {genres.map((g) => {
           const meta = GENRE_META[g.slug];
           const active = value.genres.includes(g.slug);
@@ -55,10 +55,10 @@ export function FilterBar({
               onClick={() => toggleGenre(g.slug)}
               aria-pressed={active}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-50",
+                "flex items-center gap-1.5 rounded-[3px] border px-2.5 py-1 font-slab text-[9px] tracking-[0.12em] uppercase transition-colors disabled:opacity-50",
                 active
-                  ? "border-transparent text-[#0a0a0c]"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground"
+                  ? "border-ink text-ink shadow-[inset_0_0_0_1px_rgb(0_0_0/0.25)]"
+                  : "border-gold/40 bg-black/25 text-paper/80 hover:border-gold hover:text-paper"
               )}
               style={active ? { background: meta.color } : undefined}
             >
@@ -74,11 +74,11 @@ export function FilterBar({
           onValueChange={(mood) => onChange({ ...value, mood })}
           disabled={disabled}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="h-8 w-36 rounded-[3px] border-gold/50 bg-black/25 font-serif text-xs">
             <SelectValue placeholder="Mood" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="any">Any mood</SelectItem>
+            <SelectItem value="any">Any Mood</SelectItem>
             {MOOD_TAGS.map((m) => (
               <SelectItem key={m} value={m}>
                 {m.replace(/-/g, " ")}
@@ -92,7 +92,7 @@ export function FilterBar({
           onValueChange={(maxRuntime) => onChange({ ...value, maxRuntime })}
           disabled={disabled}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="h-8 w-36 rounded-[3px] border-gold/50 bg-black/25 font-serif text-xs">
             <SelectValue placeholder="Runtime" />
           </SelectTrigger>
           <SelectContent>
@@ -111,7 +111,7 @@ export function FilterBar({
             disabled={disabled}
             onClick={() => onChange(EMPTY_FILTERS)}
           >
-            Clear filters
+            Clear Filters
           </Button>
         )}
 

@@ -3,68 +3,52 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  --radius: 0.75rem;
-
-  /* Light mode exists but this app is designed dark-first, game-hub style */
-  --background: #f2f2f4;
-  --foreground: #141416;
-
-  --card: #ffffff;
-  --card-foreground: #141416;
-
-  --popover: #ffffff;
-  --popover-foreground: #141416;
-
-  --primary: #3fa562;
-  --primary-foreground: #08120c;
-
-  --secondary: #e7e7ea;
-  --secondary-foreground: #141416;
-
-  --muted: #ebebee;
-  --muted-foreground: #6b6b72;
-
-  --accent: #3fa562;
-  --accent-foreground: #08120c;
-
-  --destructive: #e5484d;
-  --destructive-foreground: #ffffff;
-
-  --border: #dcdce0;
-  --input: #dcdce0;
-  --ring: #3fa562;
-}
-
+/*
+ * Victorian casino: emerald velvet curtains and gold trim around the page,
+ * cream broadside paper for anything you read, deep red for anything you
+ * press. Palette kept to the broadside set: black, cream, deep red, gold,
+ * forest green. (The genre "suit" colours stay as the one exception.)
+ */
+:root,
 .dark {
-  /* CineNerdle-inspired: near-black charcoal, colorful genre accents */
-  --background: #16171a;
-  --foreground: #f4f4f5;
+  --radius: 0.375rem;
 
-  --card: #202126;
-  --card-foreground: #f4f4f5;
+  --background: #0d2418;
+  --foreground: #f3e9d2;
 
-  --popover: #202126;
-  --popover-foreground: #f4f4f5;
+  --card: #12301f;
+  --card-foreground: #f3e9d2;
 
-  --primary: #5ebe83;
-  --primary-foreground: #0a1510;
+  --popover: #f3e9d2;
+  --popover-foreground: #1b1612;
 
-  --secondary: #2a2b31;
-  --secondary-foreground: #f4f4f5;
+  --primary: #a61e22;
+  --primary-foreground: #f6ecd4;
 
-  --muted: #232429;
-  --muted-foreground: #9a9aa2;
+  --secondary: #1a4029;
+  --secondary-foreground: #f3e9d2;
 
-  --accent: #5ebe83;
-  --accent-foreground: #0a1510;
+  --muted: #163824;
+  --muted-foreground: #c8b98f;
 
-  --destructive: #f16267;
-  --destructive-foreground: #16171a;
+  --accent: #d4a531;
+  --accent-foreground: #1b1612;
 
-  --border: #313239;
-  --input: #313239;
-  --ring: #5ebe83;
+  --destructive: #c2412d;
+  --destructive-foreground: #f6ecd4;
+
+  --border: #6e5a24;
+  --input: #6e5a24;
+  --ring: #d4a531;
+
+  --paper: #f3e9d2;
+  --paper-deep: #e6d6b2;
+  --ink: #1b1612;
+  --gold: #d4a531;
+  --gold-light: #f1d27a;
+  --crimson: #a61e22;
+  --felt: #1e6b40;
+  --felt-dark: #0f3d24;
 }
 
 @theme inline {
@@ -88,7 +72,16 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* genre accent palette */
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-crimson: var(--crimson);
+  --color-felt: var(--felt);
+  --color-felt-dark: var(--felt-dark);
+
+  /* genre accent palette — the card "suits" */
   --color-genre-action: #ef4444;
   --color-genre-comedy: #f5a623;
   --color-genre-drama: #3b82f6;
@@ -100,12 +93,17 @@
   --color-genre-fantasy: #6366f1;
   --color-genre-documentary: #94a3b8;
 
-  --font-display: var(--font-archivo);
-  --font-sans: var(--font-archivo);
+  /* Broadside woodtype: fat face display, ornamental Tuscan, extended slab
+     caps, and a period serif for running text. */
+  --font-display: var(--font-fatface);
+  --font-woodtype: var(--font-rye);
+  --font-slab: var(--font-holtwood);
+  --font-sans: var(--font-old-standard);
+  --font-serif: var(--font-old-standard);
 
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: calc(var(--radius) - 3px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 6px);
 }
 
@@ -122,8 +120,32 @@
     @apply bg-background text-foreground font-sans;
   }
 
-  h1, h2, h3, h4 {
-    @apply font-display tracking-tight;
+  /* Velvet curtain: vertical folds, a spotlight from above, darker edges.
+     Painted once on its own fixed, composited layer — a fixed *background*
+     on body would force a full-page repaint whenever anything moves. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    will-change: transform;
+    background-image:
+      radial-gradient(ellipse 70% 45% at 50% 0%, rgb(241 210 122 / 0.14), transparent 70%),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgb(0 0 0 / 0.55) 100%),
+      repeating-linear-gradient(
+        90deg,
+        rgb(0 0 0 / 0.32) 0px,
+        rgb(255 255 255 / 0.035) 28px,
+        rgb(0 0 0 / 0.32) 56px
+      );
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
   }
 }
 
@@ -132,7 +154,39 @@
     text-wrap: balance;
   }
 
-  .card-glow {
-    box-shadow: 0 0 0 1px var(--border), 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+  /* Cream broadside paper with a double-rule frame and a little age. */
+  .broadside {
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(rgb(120 90 40 / 0.07) 1px, transparent 1px),
+      radial-gradient(ellipse at center, transparent 60%, rgb(150 110 50 / 0.18) 100%);
+    background-size:
+      5px 5px,
+      100% 100%;
+    border: 4px double var(--ink);
+    box-shadow:
+      0 0 0 3px var(--paper),
+      0 0 0 4px rgb(212 165 49 / 0.7),
+      0 18px 40px -12px rgb(0 0 0 / 0.7);
+  }
+
+  /* Aged playing-card stock with a linen finish: warm cream (a step lighter
+     than the broadside paper, so a card still stands out on a placard), the
+     fine cross-hatch of linen-embossed card, and edges darkened by handling. */
+  .card-stock {
+    background-color: #f6eedb;
+    background-image:
+      radial-gradient(ellipse at center, transparent 58%, rgb(140 100 40 / 0.2) 100%),
+      repeating-linear-gradient(0deg, rgb(120 90 40 / 0.055) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgb(120 90 40 / 0.055) 0 1px, transparent 1px 3px);
+  }
+
+  /* Gold leaf lettering. */
+  .gold-leaf {
+    background: linear-gradient(180deg, #fff1bf 0%, #f1d27a 35%, #b8862a 70%, #f1d27a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }

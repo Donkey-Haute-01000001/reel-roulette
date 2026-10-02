@@ -31,9 +31,15 @@ export async function fetchWatchlist(): Promise<WatchlistEntry[]> {
 export async function addToWatchlist(movieId: number): Promise<boolean> {
   if (!supabase) return false;
   const sessionId = getSessionId();
+  // ignoreDuplicates = ON CONFLICT DO NOTHING: re-saving a movie that's
+  // already in the deck is a no-op. (A plain upsert would UPDATE the existing
+  // row, and the watchlist RLS policies deliberately don't allow updates.)
   const { error } = await supabase
     .from("watchlist")
-    .upsert({ session_id: sessionId, movie_id: movieId }, { onConflict: "session_id,movie_id" });
+    .upsert(
+      { session_id: sessionId, movie_id: movieId },
+      { onConflict: "session_id,movie_id", ignoreDuplicates: true }
+    );
   if (error) {
     console.error("addToWatchlist failed:", error.message);
     return false;

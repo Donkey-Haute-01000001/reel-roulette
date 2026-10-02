@@ -1,46 +1,48 @@
 "use client";
 
 import * as React from "react";
-import { Shuffle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-import type { Genre, Movie } from "@/lib/types";
-import { EMPTY_FILTERS, applyFilters } from "@/lib/movie-filters";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { FilterBar } from "@/components/filter-bar";
-import { SwipeDeck } from "@/components/swipe-deck";
+import type { Genre, Movie, WatchlistEntry } from "@/lib/types";
+import { addToWatchlist, fetchWatchlist } from "@/lib/watchlist-client";
+import { BroadsideBanner } from "@/components/broadside";
+import { RouletteSlot } from "@/components/roulette-slot";
 
-export function RouletteScreen({ movies, genres }: { movies: Movie[]; genres: Genre[] }) {
-  const [filters, setFilters] = React.useState(EMPTY_FILTERS);
-  const [resetKey, setResetKey] = React.useState(0);
+export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: Genre[] }) {
+  const router = useRouter();
+  const [entries, setEntries] = React.useState<WatchlistEntry[]>([]);
 
-  const filtered = React.useMemo(() => applyFilters(movies, filters), [movies, filters]);
+  React.useEffect(() => {
+    fetchWatchlist().then(setEntries);
+  }, []);
+
+  const deckMovies = React.useMemo(() => entries.map((e) => e.movies), [entries]);
+  const savedIds = React.useMemo(() => new Set(deckMovies.map((m) => m.id)), [deckMovies]);
+
+  // Adding a spin result sends you straight to the Watch Deck with that card
+  // already played to the table.
+  const handleSave = async (movie: Movie) => {
+    const ok = await addToWatchlist(movie.id);
+    if (ok) router.push(`/watchlist?play=${movie.id}`);
+    return ok;
+  };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <div className="mb-8 text-center">
-        <Badge className="mb-3">{movies.length} movies in the pool</Badge>
-        <h1 className="text-4xl font-black sm:text-5xl">Can&apos;t decide what to watch?</h1>
-        <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-          Spin the deck, swipe right to save a pick, swipe left to reroll. Narrow it down first
-          if you&apos;re in a specific mood.
-        </p>
-      </div>
-
-      <div className="mb-8">
-        <FilterBar genres={genres} value={filters} onChange={setFilters}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setResetKey((k) => k + 1)}
-            className="gap-1.5"
-          >
-            <Shuffle className="size-3.5" /> Reshuffle
-          </Button>
-        </FilterBar>
-      </div>
-
-      <SwipeDeck key={resetKey} movies={filtered} />
+    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+      <BroadsideBanner
+        className="mb-5"
+        kicker="Three Reels · One Picture"
+        lead="Try Your Luck at the"
+        title="Spin"
+        subtitle="Spin Your Watch Deck or the Whole Catalogue · Three Spins Per Day"
+      />
+      <RouletteSlot
+        deckMovies={deckMovies}
+        catalog={catalog}
+        genres={genres}
+        savedIds={savedIds}
+        onSave={handleSave}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, useMotionValue, useTransform, AnimatePresence } from "motion/react";
-import { Bookmark, Info, RotateCcw } from "lucide-react";
+import { Bookmark, Eye, Info } from "lucide-react";
 
 import type { Movie } from "@/lib/types";
 import { MovieCard } from "@/components/movie-card";
@@ -15,7 +15,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { MoviePoster } from "@/components/movie-poster";
+import { CardBack } from "@/components/card-back";
 import { addToWatchlist } from "@/lib/watchlist-client";
+import { markSeen } from "@/lib/seen-client";
 import { shuffle } from "@/lib/utils";
 
 // A fresh shuffled pass over the whole pool, only ever built once the
@@ -32,6 +34,10 @@ function nextBag(pool: Movie[], excludeId: number | null): Movie[] {
 }
 
 const SWIPE_THRESHOLD = 110;
+
+// Sized off the window height (leaving room for the nav, header, filters and
+// buttons) so the whole swipe screen fits without scrolling.
+const CARD_HEIGHT = "clamp(260px, calc(100dvh - 440px), 440px)";
 
 // Shuffling uses Math.random(), which necessarily differs between the
 // server-rendered pass and the client's hydration pass — so the *first*
@@ -51,7 +57,26 @@ function useMounted() {
 
 type Phase = "idle" | "exiting";
 
-export function SwipeDeck({ movies }: { movies: Movie[] }) {
+export function SwipeDeck({
+  movies,
+  loading = false,
+  emptyTitle = "No Pictures Match",
+  emptyBody = "Pray widen your genre or mood selections.",
+  emptyAction,
+  onSave,
+  onSeen,
+}: {
+  movies: Movie[];
+  // While the Watch Deck loads (so saved cards can be left out), show a
+  // face-down card instead of dealing.
+  loading?: boolean;
+  emptyTitle?: string;
+  emptyBody?: string;
+  // Extra control shown with the empty states (e.g. shuffle seen cards back in).
+  emptyAction?: React.ReactNode;
+  onSave?: (movie: Movie) => void;
+  onSeen?: (movie: Movie) => void;
+}) {
   const mounted = useMounted();
   const [queue, setQueue] = React.useState<Movie[]>(movies);
   const [phase, setPhase] = React.useState<Phase>("idle");
@@ -61,6 +86,10 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
   const [seenCount, setSeenCount] = React.useState(0);
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
+  // Cards played since this deck was dealt, either way: saved ones are in
+  // your Watch Deck and seen ones are recorded as seen, so neither is dealt
+  // again in a later pass.
+  const [playedHere, setPlayedHere] = React.useState<Set<number>>(() => new Set());
 
   // Rebuild the queue whenever the filtered movie pool changes. (Adjusting
   // state during render, per React's guidance, rather than in an effect —
@@ -109,23 +138,31 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
       setExitDirection(direction);
       setExitingMovie(current);
       setSeenCount((c) => c + 1);
+      const played = new Set(playedHere).add(current.id);
+      setPlayedHere(played);
       if (direction === "right") {
         setSavedCount((c) => c + 1);
-        setToast(`Saved "${current.title}" to your Watch Deck`);
+        setToast(`"${current.title}" Added to Your Watch Deck`);
         void addToWatchlist(current.id);
+        onSave?.(current);
       } else {
-        setToast(`Rerolled "${current.title}"`);
+        setToast(`"${current.title}" · Already Seen`);
+        void markSeen(current.id);
+        onSeen?.(current);
       }
 
       setQueue((prev) => {
         const rest = prev.slice(1);
         if (rest.length === 0 && movies.length > 0) {
-          return nextBag(movies, current.id);
+          return nextBag(
+            movies.filter((m) => !played.has(m.id)),
+            current.id
+          );
         }
         return rest;
       });
     },
-    [phase, current, movies]
+    [phase, current, movies, playedHere, onSave, onSeen]
   );
 
   // Only reveal the next card once the exit animation has genuinely
@@ -138,21 +175,38 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
     setExitingMovie(null);
   }, [phase]);
 
-  if (movies.length === 0) {
+  if (loading) {
     return (
-      <div className="flex h-[520px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center">
-        <p className="font-display text-xl font-bold">No movies match these filters</p>
-        <p className="max-w-xs text-sm text-muted-foreground">
-          Try widening your genre or mood picks — or connect Supabase if this atlas is still
-          empty.
+      <div className="mx-auto aspect-[5/7] animate-pulse" style={{ height: CARD_HEIGHT }}>
+        <CardBack className="shadow-2xl" />
+      </div>
+    );
+  }
+
+  // Nothing to deal: either nothing matches, or every card has been played.
+  if (movies.length === 0 || (!displayedMovie && phase === "idle")) {
+    const allPlayed = movies.length > 0;
+    return (
+      <div
+        style={{ height: CARD_HEIGHT }}
+        className="broadside mx-auto flex aspect-[5/7] flex-col items-center justify-center gap-3 px-6 text-center"
+      >
+        <p className="font-display text-xl uppercase">
+          {allPlayed ? "That's the Whole Deck" : emptyTitle}
         </p>
+        <p className="max-w-xs font-serif text-sm italic">
+          {allPlayed
+            ? "Every picture here has been played. Widen your selections, or go play your Watch Deck."
+            : emptyBody}
+        </p>
+        {emptyAction}
       </div>
     );
   }
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative mx-auto h-[560px] w-full max-w-sm sm:h-[600px]">
+      <div className="relative mx-auto aspect-[5/7]" style={{ height: CARD_HEIGHT }}>
         <AnimatePresence initial={false}>
           {displayedMovie && (
             <SwipeCard
@@ -166,16 +220,16 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
         </AnimatePresence>
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-4">
+      <div className="mt-4 flex items-center justify-center gap-4">
         <Button
           size="icon"
           variant="outline"
-          className="size-14 border-destructive/40 text-destructive hover:bg-destructive/10"
-          aria-label="Reroll"
+          className="size-12 border-ink/60 bg-paper text-crimson hover:bg-paper-deep"
+          aria-label="Seen it"
           disabled={!displayedMovie || phase !== "idle"}
           onClick={() => commitSwipe("left")}
         >
-          <RotateCcw className="size-6" />
+          <Eye className="size-6" />
         </Button>
         <Button
           size="icon"
@@ -188,7 +242,7 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
         </Button>
         <Button
           size="icon"
-          className="size-14 bg-primary text-primary-foreground hover:brightness-110"
+          className="size-12 border-gold bg-felt text-paper hover:brightness-115"
           aria-label="Save to Watch Deck"
           disabled={!displayedMovie || phase !== "idle"}
           onClick={() => commitSwipe("right")}
@@ -197,12 +251,12 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
         </Button>
       </div>
 
-      <p className="mt-4 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        Swipe or use the buttons — {seenCount} seen · {savedCount} saved
+      <p className="mt-3 font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase">
+        {seenCount} {seenCount === 1 ? "Card" : "Cards"} Played · {savedCount} Saved
       </p>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold shadow-lg">
+        <div className="broadside fixed bottom-6 left-1/2 z-50 -translate-x-1/2 px-4 py-2 font-serif text-sm font-bold">
           {toast}
         </div>
       )}
@@ -282,17 +336,17 @@ function SwipeCard({
     >
       <motion.span
         style={{ opacity: saveOpacity }}
-        className="absolute top-6 left-6 z-10 -rotate-12 rounded-lg border-4 border-primary px-3 py-1 font-display text-2xl font-black text-primary"
+        className="absolute top-[12%] left-4 z-10 -rotate-12 rounded-[3px] border-4 border-double border-felt bg-paper/80 px-2 py-0.5 font-woodtype text-lg text-felt"
       >
         SAVE
       </motion.span>
       <motion.span
         style={{ opacity: skipOpacity }}
-        className="absolute top-6 right-6 z-10 rotate-12 rounded-lg border-4 border-destructive px-3 py-1 font-display text-2xl font-black text-destructive"
+        className="absolute top-[12%] right-4 z-10 rotate-12 rounded-[3px] border-4 border-double border-crimson bg-paper/80 px-2 py-0.5 font-woodtype text-lg text-crimson"
       >
-        SKIP
+        SEEN
       </motion.span>
-      <MovieCard movie={movie} className="h-full shadow-2xl" />
+      <MovieCard movie={movie} className="shadow-2xl" />
     </motion.div>
   );
 }

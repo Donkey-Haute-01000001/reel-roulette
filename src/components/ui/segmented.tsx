@@ -23,7 +23,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn("inline-flex rounded-full border border-border bg-card p-1", className)}
+      className={cn("inline-flex rounded-[4px] border border-gold/50 bg-black/30 p-1", className)}
     >
       {options.map((opt) => {
         const active = opt.value === value;
@@ -35,10 +35,10 @@ export function Segmented<T extends string>({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors disabled:opacity-50 [&_svg]:size-3.5",
+              "inline-flex items-center gap-1.5 rounded-[3px] px-3 py-1.5 font-slab text-[9px] tracking-[0.12em] uppercase transition-colors disabled:opacity-50 [&_svg]:size-3.5",
               active
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-crimson text-paper shadow-[inset_0_0_0_1px_rgb(212_165_49/0.8)]"
+                : "text-paper/70 hover:text-gold-light"
             )}
           >
             {opt.label}

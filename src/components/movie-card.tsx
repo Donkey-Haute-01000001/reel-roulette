@@ -1,127 +1,167 @@
-import { Clock, Star, User } from "lucide-react";
+import * as React from "react";
+import { Clock, Star, type LucideIcon } from "lucide-react";
 
 import type { Movie } from "@/lib/types";
 import { GENRE_META } from "@/lib/genre-meta";
-import { Badge } from "@/components/ui/badge";
-import { MoviePoster } from "@/components/movie-poster";
+import { cardRank } from "@/lib/card-rank";
 import { cn } from "@/lib/utils";
 
-// Each movie is drawn as a playing card. The primary genre is the card's
-// "suit" (10 suits — one per genre in GENRE_META), shown as corner pips
-// top-left and mirrored bottom-right like a real card's index.
+// Each movie is a playing card in the manner of an old (c. 1930) deck:
+// linen-finish cream stock, a thin ink frame inset from the edge, the corner
+// indices (rank over suit) in the margins outside it, a large suit pip in the
+// frame's top-right corner mirrored bottom-left, and an ace-style rosette
+// medallion around the suit. The primary genre is the suit (10 suits, one per
+// genre in GENRE_META); the rank comes from the rating (see card-rank.ts).
 //
-// `compact` is the smaller layout used in the Watch Deck fan and grid.
-export function MovieCard({
+// Everything inside is sized in container units (cqw = 1% of the card's
+// width), so the card is only given a width and scales as one piece. The
+// outer div is the size container; cqw on the face itself would resolve
+// against the *page*, not the card, so the face lives one level down.
+// Memoised: the Watch Deck hand re-renders on every hover change, but a
+// card's face only depends on its movie.
+export const MovieCard = React.memo(function MovieCard({
   movie,
-  size = "default",
   className,
 }: {
   movie: Movie;
-  size?: "default" | "compact";
   className?: string;
 }) {
   const meta = GENRE_META[movie.primary_genre];
-  const compact = size === "compact";
+  const { rank } = cardRank(movie.rating);
+  // Genre colours are tuned for a dark page; darken them for print on cream.
+  const ink = `color-mix(in srgb, ${meta.color} 70%, #000)`;
+  const pip = `color-mix(in srgb, ${meta.color} 85%, #000)`;
 
   return (
-    <div
-      className={cn(
-        "relative flex h-full w-full flex-col rounded-[22px] border border-border bg-card p-2 select-none",
-        className
-      )}
-      style={{
-        backgroundImage: `linear-gradient(160deg, color-mix(in srgb, ${meta.color} 14%, transparent), transparent 45%)`,
-      }}
-    >
+    <div className="@container w-full select-none">
       <div
-        className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[15px] border bg-card"
-        style={{ borderColor: `color-mix(in srgb, ${meta.color} 40%, transparent)` }}
+        className={cn(
+          "card-stock relative aspect-[5/7] w-full overflow-hidden rounded-[6cqw] border border-[#d3c39f] text-[#1c1b19]",
+          className
+        )}
       >
-        <CornerPip movie={movie} className="absolute top-2 left-2 z-10" />
-
-        <MoviePoster
-          genre={movie.primary_genre}
-          title={movie.title}
-          year={movie.release_year}
-          className={cn("shrink-0 rounded-none", compact ? "h-40" : "h-52 sm:h-60")}
+        <CornerIndex rank={rank} icon={meta.icon} color={ink} className="top-[4cqw] left-[1.5cqw]" />
+        <CornerIndex
+          rank={rank}
+          icon={meta.icon}
+          color={ink}
+          className="right-[1.5cqw] bottom-[4cqw] rotate-180"
         />
 
-        <div className={cn("flex flex-1 flex-col overflow-y-auto", compact ? "gap-2 p-3.5" : "gap-3 p-5")}>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge style={{ background: meta.color, color: "#0a0a0c", borderColor: "transparent" }}>
+        {/* The printed frame, with the large pips in its corners */}
+        <div className="absolute inset-x-[12.5cqw] inset-y-[5cqw] rounded-[1cqw] border-[max(1px,0.45cqw)] border-[#1c1b19]/75">
+          <meta.icon
+            aria-hidden
+            className="absolute top-[2.5cqw] right-[2.5cqw] size-[10cqw]"
+            style={{ color: pip }}
+            strokeWidth={2.25}
+          />
+          <meta.icon
+            aria-hidden
+            className="absolute bottom-[2.5cqw] left-[2.5cqw] size-[10cqw] rotate-180"
+            style={{ color: pip }}
+            strokeWidth={2.25}
+          />
+
+          <div className="flex h-full flex-col items-center px-[3cqw] pt-[4cqw] pb-[5cqw] text-center">
+            <p
+              className="w-full truncate px-[11cqw] font-slab text-[4cqw] leading-[6cqw] tracking-[0.1em] uppercase"
+              style={{ color: ink }}
+            >
               {meta.label}
-            </Badge>
-            {movie.genre_slugs
-              .filter((g) => g !== movie.primary_genre)
-              .slice(0, compact ? 1 : 2)
-              .map((g) => (
-                <Badge key={g} variant="outline">
-                  {GENRE_META[g]?.label ?? g}
-                </Badge>
-              ))}
-            <span className="ml-auto inline-flex items-center gap-1 text-sm font-bold text-foreground">
-              <Star className="size-4 fill-current text-primary" />
-              {movie.rating.toFixed(1)}
-            </span>
-          </div>
+            </p>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <User className="size-3.5" /> {movie.director}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="size-3.5" /> {movie.runtime_minutes} min
-            </span>
-          </div>
-
-          <p
-            className={cn(
-              "text-sm leading-relaxed text-foreground/90",
-              compact && "line-clamp-3 text-[13px] leading-snug"
-            )}
-          >
-            {movie.synopsis}
-          </p>
-
-          {!compact && movie.mood_tags.length > 0 && (
-            <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-              {movie.mood_tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-secondary-foreground/80"
-                >
-                  #{tag.replace(/-/g, " ")}
-                </span>
-              ))}
+            <div className="flex min-h-0 w-full flex-1 items-center justify-center py-[1cqw]">
+              <Medallion icon={meta.icon} color={meta.color} />
             </div>
-          )}
-        </div>
 
-        <div className="flex h-9 shrink-0 items-center justify-end px-2">
-          <CornerPip movie={movie} className="rotate-180" />
+            <p className="line-clamp-3 w-full px-[1cqw] font-display text-[6.8cqw] leading-[1.12] text-balance">
+              {movie.title}
+            </p>
+            <p className="mt-[1.5cqw] inline-flex items-center gap-[3cqw] font-serif text-[4.8cqw] font-bold text-[#6b6457]">
+              <span className="inline-flex items-center gap-[1cqw]">
+                <Clock className="size-[4.4cqw]" />
+                {movie.runtime_minutes} min
+              </span>
+              <span className="inline-flex items-center gap-[1cqw]">
+                <Star className="size-[4.4cqw] fill-[#e0a400] text-[#e0a400]" />
+                {movie.rating.toFixed(1)}
+              </span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+});
 
-// A card's corner index. Suit only for now — the empty `rank` slot sits
-// above the suit, where a rating-as-rank glyph can drop in later without
-// reworking the corner.
-function CornerPip({ movie, className }: { movie: Movie; className?: string }) {
-  const meta = GENRE_META[movie.primary_genre];
-  const Icon = meta.icon;
-
+// A card's corner index: rank over suit, printed in the margin.
+function CornerIndex({
+  rank,
+  icon: Icon,
+  color,
+  className,
+}: {
+  rank: string;
+  icon: LucideIcon;
+  color: string;
+  className?: string;
+}) {
   return (
     <div
       aria-hidden
-      className={cn(
-        "flex flex-col items-center rounded-md bg-black/45 px-1 py-1 leading-none backdrop-blur-sm",
-        className
-      )}
+      className={cn("absolute flex w-[10cqw] flex-col items-center leading-none", className)}
+      style={{ color }}
     >
-      <span data-slot="rank" className="font-display text-sm font-black empty:hidden" />
-      <Icon className="size-4" style={{ color: meta.color }} strokeWidth={2.25} />
+      <span
+        className={cn(
+          "font-serif font-bold tracking-[-0.06em]",
+          rank.length > 1 ? "text-[6.5cqw]" : "text-[8cqw]"
+        )}
+      >
+        {rank}
+      </span>
+      <Icon className="mt-[0.8cqw] size-[6.5cqw]" strokeWidth={2.5} />
+    </div>
+  );
+}
+
+// The ace-style rosette: a ring of petals and beads around the suit.
+const PETALS = Array.from({ length: 16 }, (_, i) => i * 22.5);
+const BEADS = Array.from({ length: 32 }, (_, i) => (i * Math.PI * 2) / 32);
+
+function Medallion({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
+  const deep = `color-mix(in srgb, ${color} 60%, #000)`;
+
+  return (
+    <div className="relative aspect-square h-full max-h-[46cqw] max-w-full">
+      <svg aria-hidden viewBox="-50 -50 100 100" className="absolute inset-0 h-full w-full">
+        {PETALS.map((angle, i) => (
+          <ellipse
+            key={angle}
+            cx="0"
+            cy="-35"
+            rx="4.2"
+            ry="10.5"
+            transform={`rotate(${angle})`}
+            fill={i % 2 === 0 ? color : deep}
+            fillOpacity={i % 2 === 0 ? 0.55 : 0.4}
+            stroke={deep}
+            strokeOpacity="0.5"
+            strokeWidth="0.6"
+          />
+        ))}
+        {BEADS.map((a) => (
+          <circle key={a} cx={Math.cos(a) * 47} cy={Math.sin(a) * 47} r="1.1" fill={deep} fillOpacity="0.55" />
+        ))}
+        <circle r="25" fill="#f6eedb" stroke={deep} strokeWidth="1.4" />
+        <circle r="21.5" fill="none" stroke={deep} strokeOpacity="0.45" strokeWidth="0.8" strokeDasharray="1.6 1.6" />
+      </svg>
+      <Icon
+        className="absolute top-1/2 left-1/2 size-[30%] -translate-x-1/2 -translate-y-1/2"
+        style={{ color }}
+        strokeWidth={1.8}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { getGenres, getMovies } from "@/lib/data";
-import { RouletteScreen } from "@/components/roulette-screen";
+import { SwipeScreen } from "@/components/swipe-screen";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export default async function HomePage() {
           <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to load the movie pool.
         </p>
       )}
-      <RouletteScreen movies={movies} genres={genres} />
+      <SwipeScreen movies={movies} genres={genres} />
     </div>
   );
 }
