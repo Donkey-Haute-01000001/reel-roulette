@@ -21,6 +21,14 @@ export function MovieDetails({
   const meta = GENRE_META[movie.primary_genre];
   const others = movie.genre_slugs.filter((g) => g !== movie.primary_genre);
   const { name: rankName } = cardRank(movie.rating);
+  const cast = movie.cast_members ?? [];
+  // A playbill bills a cartoon's voices and a documentary's subjects differently.
+  const castLabel =
+    movie.primary_genre === "documentary"
+      ? "Featuring"
+      : movie.primary_genre === "animation"
+        ? "With the Voices of"
+        : "Starring";
 
   return (
     <div className={cn("flex flex-col gap-2 text-center text-ink", className)}>
@@ -48,6 +56,15 @@ export function MovieDetails({
           <Star className="size-3.5 fill-[#e0a400] text-[#e0a400]" /> {movie.rating.toFixed(1)}
         </span>
       </div>
+
+      {cast.length > 0 && (
+        <p className="font-serif text-sm">
+          <span className="font-slab text-[9px] tracking-[0.2em] text-crimson uppercase">
+            {castLabel}
+          </span>{" "}
+          <span className="italic">{cast.join(", ")}</span>
+        </p>
+      )}
 
       <p className="font-serif text-sm leading-relaxed">{movie.synopsis}</p>
 

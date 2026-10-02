@@ -245,6 +245,79 @@ MOVIES = [
 def sql_num(v):
     return str(v)
 
+# Top-billed cast for each title (voice cast for animation, featured people
+# for documentaries), keyed by title.
+CAST = {
+    "Die Hard": ["Bruce Willis", "Alan Rickman", "Bonnie Bedelia", "Reginald VelJohnson"],
+    "Mad Max: Fury Road": ["Tom Hardy", "Charlize Theron", "Nicholas Hoult", "Hugh Keays-Byrne"],
+    "The Matrix": ["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss", "Hugo Weaving"],
+    "Terminator 2: Judgment Day": ["Arnold Schwarzenegger", "Linda Hamilton", "Edward Furlong", "Robert Patrick"],
+    "John Wick": ["Keanu Reeves", "Michael Nyqvist", "Alfie Allen", "Willem Dafoe"],
+    "Raiders of the Lost Ark": ["Harrison Ford", "Karen Allen", "Paul Freeman", "John Rhys-Davies"],
+    "Speed": ["Keanu Reeves", "Sandra Bullock", "Dennis Hopper", "Jeff Daniels"],
+    "Mission: Impossible - Fallout": ["Tom Cruise", "Henry Cavill", "Rebecca Ferguson", "Simon Pegg"],
+    "Airplane!": ["Robert Hays", "Julie Hagerty", "Leslie Nielsen", "Lloyd Bridges"],
+    "Superbad": ["Jonah Hill", "Michael Cera", "Christopher Mintz-Plasse", "Seth Rogen"],
+    "Groundhog Day": ["Bill Murray", "Andie MacDowell", "Chris Elliott", "Stephen Tobolowsky"],
+    "The Grand Budapest Hotel": ["Ralph Fiennes", "Tony Revolori", "Saoirse Ronan", "Adrien Brody"],
+    "Bridesmaids": ["Kristen Wiig", "Maya Rudolph", "Rose Byrne", "Melissa McCarthy"],
+    "Dr. Strangelove": ["Peter Sellers", "George C. Scott", "Sterling Hayden", "Slim Pickens"],
+    "Anchorman: The Legend of Ron Burgundy": ["Will Ferrell", "Christina Applegate", "Paul Rudd", "Steve Carell"],
+    "Some Like It Hot": ["Marilyn Monroe", "Tony Curtis", "Jack Lemmon", "Joe E. Brown"],
+    "The Godfather": ["Marlon Brando", "Al Pacino", "James Caan", "Diane Keaton"],
+    "Forrest Gump": ["Tom Hanks", "Robin Wright", "Gary Sinise", "Sally Field"],
+    "Schindler's List": ["Liam Neeson", "Ben Kingsley", "Ralph Fiennes", "Embeth Davidtz"],
+    "12 Angry Men": ["Henry Fonda", "Lee J. Cobb", "Martin Balsam", "E.G. Marshall"],
+    "The Shawshank Redemption": ["Tim Robbins", "Morgan Freeman", "Bob Gunton", "William Sadler"],
+    "There Will Be Blood": ["Daniel Day-Lewis", "Paul Dano", "Kevin J. O'Connor", "Ciarán Hinds"],
+    "Moonlight": ["Mahershala Ali", "Naomie Harris", "Trevante Rhodes", "Ashton Sanders"],
+    "Parasite": ["Song Kang-ho", "Lee Sun-kyun", "Cho Yeo-jeong", "Choi Woo-shik"],
+    "The Shining": ["Jack Nicholson", "Shelley Duvall", "Danny Lloyd", "Scatman Crothers"],
+    "Get Out": ["Daniel Kaluuya", "Allison Williams", "Bradley Whitford", "Catherine Keener"],
+    "Hereditary": ["Toni Collette", "Alex Wolff", "Milly Shapiro", "Gabriel Byrne"],
+    "Alien": ["Sigourney Weaver", "Tom Skerritt", "John Hurt", "Ian Holm"],
+    "A Quiet Place": ["Emily Blunt", "John Krasinski", "Millicent Simmonds", "Noah Jupe"],
+    "The Exorcist": ["Ellen Burstyn", "Max von Sydow", "Linda Blair", "Jason Miller"],
+    "Psycho": ["Anthony Perkins", "Janet Leigh", "Vera Miles", "John Gavin"],
+    "Blade Runner": ["Harrison Ford", "Rutger Hauer", "Sean Young", "Daryl Hannah"],
+    "Interstellar": ["Matthew McConaughey", "Anne Hathaway", "Jessica Chastain", "Michael Caine"],
+    "Arrival": ["Amy Adams", "Jeremy Renner", "Forest Whitaker", "Michael Stuhlbarg"],
+    "2001: A Space Odyssey": ["Keir Dullea", "Gary Lockwood", "William Sylvester", "Douglas Rain"],
+    "Inception": ["Leonardo DiCaprio", "Joseph Gordon-Levitt", "Elliot Page", "Tom Hardy"],
+    "Dune": ["Timothée Chalamet", "Rebecca Ferguson", "Oscar Isaac", "Zendaya"],
+    "E.T. the Extra-Terrestrial": ["Henry Thomas", "Drew Barrymore", "Dee Wallace", "Robert MacNaughton"],
+    "Star Wars: A New Hope": ["Mark Hamill", "Harrison Ford", "Carrie Fisher", "Alec Guinness"],
+    "Before Sunrise": ["Ethan Hawke", "Julie Delpy"],
+    "Eternal Sunshine of the Spotless Mind": ["Jim Carrey", "Kate Winslet", "Kirsten Dunst", "Mark Ruffalo"],
+    "Pride & Prejudice": ["Keira Knightley", "Matthew Macfadyen", "Rosamund Pike", "Donald Sutherland"],
+    "When Harry Met Sally...": ["Billy Crystal", "Meg Ryan", "Carrie Fisher", "Bruno Kirby"],
+    "La La Land": ["Ryan Gosling", "Emma Stone", "John Legend", "J.K. Simmons"],
+    "Notting Hill": ["Julia Roberts", "Hugh Grant", "Rhys Ifans", "Emma Chambers"],
+    "Se7en": ["Brad Pitt", "Morgan Freeman", "Gwyneth Paltrow", "Kevin Spacey"],
+    "No Country for Old Men": ["Tommy Lee Jones", "Javier Bardem", "Josh Brolin", "Kelly Macdonald"],
+    "Gone Girl": ["Ben Affleck", "Rosamund Pike", "Neil Patrick Harris", "Tyler Perry"],
+    "The Silence of the Lambs": ["Jodie Foster", "Anthony Hopkins", "Scott Glenn", "Ted Levine"],
+    "Prisoners": ["Hugh Jackman", "Jake Gyllenhaal", "Viola Davis", "Paul Dano"],
+    "Zodiac": ["Jake Gyllenhaal", "Mark Ruffalo", "Robert Downey Jr.", "Anthony Edwards"],
+    "Spirited Away": ["Rumi Hiiragi", "Miyu Irino", "Mari Natsuki", "Bunta Sugawara"],
+    "Toy Story": ["Tom Hanks", "Tim Allen", "Don Rickles", "Annie Potts"],
+    "Spider-Man: Into the Spider-Verse": ["Shameik Moore", "Hailee Steinfeld", "Jake Johnson", "Mahershala Ali"],
+    "WALL-E": ["Ben Burtt", "Elissa Knight", "Jeff Garlin", "Fred Willard"],
+    "The Iron Giant": ["Eli Marienthal", "Jennifer Aniston", "Harry Connick Jr.", "Vin Diesel"],
+    "Coco": ["Anthony Gonzalez", "Gael García Bernal", "Benjamin Bratt", "Alanna Ubach"],
+    "Up": ["Ed Asner", "Jordan Nagai", "Christopher Plummer", "Bob Peterson"],
+    "The Lord of the Rings: The Fellowship of the Ring": ["Elijah Wood", "Ian McKellen", "Viggo Mortensen", "Sean Astin"],
+    "Pan's Labyrinth": ["Ivana Baquero", "Sergi López", "Maribel Verdú", "Doug Jones"],
+    "The Princess Bride": ["Cary Elwes", "Robin Wright", "Mandy Patinkin", "André the Giant"],
+    "Harry Potter and the Prisoner of Azkaban": ["Daniel Radcliffe", "Rupert Grint", "Emma Watson", "Gary Oldman"],
+    "Big Fish": ["Ewan McGregor", "Albert Finney", "Billy Crudup", "Jessica Lange"],
+    "Free Solo": ["Alex Honnold", "Tommy Caldwell", "Sanni McCandless"],
+    "Won't You Be My Neighbor?": ["Fred Rogers", "Joanne Rogers", "François Clemmons"],
+    "Amy": ["Amy Winehouse", "Mitch Winehouse", "Mark Ronson"],
+    "13th": ["Angela Davis", "Michelle Alexander", "Cory Booker", "Bryan Stevenson"],
+    "Man on Wire": ["Philippe Petit", "Jean-Louis Blondeau", "Annie Allix"],
+}
+
 lines = []
 lines.append("-- ============================================================================")
 lines.append("-- Movie Roulette — seed data (generated by scripts/gen_seed.py)")
@@ -257,11 +330,11 @@ lines.append("insert into public.genres (slug, name) values")
 lines.append(",\n".join(f"  ({s(slug)}, {s(name)})" for slug, name in GENRES) + ";")
 lines.append("")
 
-lines.append("insert into public.movies (title, release_year, director, runtime_minutes, rating, primary_genre, mood_tags, synopsis) values")
+lines.append("insert into public.movies (title, release_year, director, runtime_minutes, rating, primary_genre, mood_tags, cast_members, synopsis) values")
 rows = []
 for title, year, director, runtime, rating, primary, genres, moods, blurb in MOVIES:
     rows.append(
-        f"  ({s(title)}, {year}, {s(director)}, {runtime}, {rating}, {s(primary)}, {arr(moods)}, {s(blurb)})"
+        f"  ({s(title)}, {year}, {s(director)}, {runtime}, {rating}, {s(primary)}, {arr(moods)}, {arr(CAST.get(title, []))}, {s(blurb)})"
     )
 lines.append(",\n".join(rows) + ";")
 lines.append("")

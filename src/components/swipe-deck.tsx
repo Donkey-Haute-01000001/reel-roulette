@@ -14,14 +14,8 @@ import { Bookmark, Info, X } from "lucide-react";
 import type { Movie } from "@/lib/types";
 import { MovieCard } from "@/components/movie-card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { MoviePoster } from "@/components/movie-poster";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { MovieDetails } from "@/components/movie-details";
 import { CardBack } from "@/components/card-back";
 import { addToWatchlist } from "@/lib/watchlist-client";
 import { markSeen } from "@/lib/seen-client";
@@ -317,28 +311,17 @@ export function SwipeDeck({
       )}
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent>
+        {/* A bare frame around a broadside placard, so the dialog's own
+            card styling doesn't fight the paper. */}
+        <DialogContent className="max-h-[85dvh] overflow-y-auto border-0 bg-transparent p-3 text-ink shadow-none">
           {displayedMovie && (
-            <>
-              <MoviePoster
-                genre={displayedMovie.primary_genre}
-                title={displayedMovie.title}
-                year={displayedMovie.release_year}
-                className="-mx-6 -mt-6 mb-2 h-40"
-              />
-              <DialogHeader>
-                <DialogTitle>
-                  {displayedMovie.title} ({displayedMovie.release_year})
-                </DialogTitle>
-                <DialogDescription>
-                  Directed by {displayedMovie.director} · {displayedMovie.runtime_minutes} min ·
-                  rated {displayedMovie.rating.toFixed(1)}/10
-                </DialogDescription>
-              </DialogHeader>
-              <p className="text-sm leading-relaxed text-foreground/90">
-                {displayedMovie.synopsis}
-              </p>
-            </>
+            <div className="broadside px-6 py-5">
+              <DialogTitle className="sr-only">{displayedMovie.title}</DialogTitle>
+              <DialogDescription className="sr-only">
+                Details for {displayedMovie.title}
+              </DialogDescription>
+              <MovieDetails movie={displayedMovie} kicker="The Particulars" />
+            </div>
           )}
         </DialogContent>
       </Dialog>

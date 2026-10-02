@@ -56,7 +56,8 @@ src/lib/                    Supabase client and data layer, per-feature clients 
                             discards, spins), card ranks, filters, tabs, session id, genre metadata
 supabase/schema.sql         Tables (movies, genres, movie_genres, watchlist, seen_movies,
                             roulette_spins), RLS policies, a joined view
-supabase/seed.sql           Generated seed data (68 movies across 10 genres)
+supabase/seed.sql           Generated seed data (68 movies across 10 genres, with cast)
+supabase/add-cast.sql       One-off update adding cast to a database seeded before cast existed
 scripts/gen_seed.py         Source of truth for the dataset — regenerate with
                             `python3 scripts/gen_seed.py > supabase/seed.sql`
 ```

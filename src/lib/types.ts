@@ -24,6 +24,8 @@ export type Movie = {
   rating: number;
   primary_genre: GenreSlug;
   mood_tags: string[];
+  // Top-billed cast. Optional: absent until supabase/add-cast.sql has been run.
+  cast_members?: string[];
   synopsis: string;
   genre_slugs: GenreSlug[];
 };

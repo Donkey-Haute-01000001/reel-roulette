@@ -29,6 +29,7 @@ create table if not exists public.movies (
   rating          numeric(3,1) not null check (rating between 0 and 10),
   primary_genre   text not null references public.genres (slug),
   mood_tags       text[] not null default '{}',
+  cast_members    text[] not null default '{}',
   synopsis        text not null,
   created_at      timestamptz not null default now()
 );
