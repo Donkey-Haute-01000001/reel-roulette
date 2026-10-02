@@ -106,3 +106,27 @@ select
 from public.movies m
 left join public.movie_genres mg on mg.movie_id = m.id
 group by m.id;
+
+-- ---------------------------------------------------------------------------
+-- roulette_spins: how many Roulette slot-machine spins a session has used
+-- today (3/day limit). Kept server-side so clearing the UI's state doesn't
+-- reset it; keyed by the same anonymous session id as the watchlist.
+-- ---------------------------------------------------------------------------
+create table if not exists public.roulette_spins (
+  session_id text not null,
+  spin_date  date not null default current_date,
+  spin_count smallint not null default 0,
+  primary key (session_id, spin_date)
+);
+
+alter table public.roulette_spins enable row level security;
+
+-- Same open demo access model as the watchlist (no auth system here).
+drop policy if exists "public read" on public.roulette_spins;
+create policy "public read" on public.roulette_spins for select using (true);
+
+drop policy if exists "public upsert" on public.roulette_spins;
+create policy "public upsert" on public.roulette_spins for insert with check (true);
+
+drop policy if exists "public update" on public.roulette_spins;
+create policy "public update" on public.roulette_spins for update using (true);

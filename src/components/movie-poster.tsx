@@ -5,19 +5,43 @@ import { cn } from "@/lib/utils";
 // No licensed poster art here — real movie posters are copyrighted studio
 // assets. Instead every card gets an original, generated "lobby card" look:
 // a genre-tinted gradient with a large watermark icon and the title card.
+//
+// `mini` is the thumbnail used on the Roulette slot-machine reels: same
+// gradient + icon, with a small clamped title instead of the full title card.
 export function MoviePoster({
   genre,
   title,
   year,
+  variant = "full",
   className,
 }: {
   genre: GenreSlug;
   title: string;
   year: number;
+  variant?: "full" | "mini";
   className?: string;
 }) {
   const meta = GENRE_META[genre];
   const Icon = meta.icon;
+
+  const background = `radial-gradient(120% 120% at 15% 0%, color-mix(in srgb, ${meta.color} 55%, #16171a) 0%, #16171a 70%)`;
+
+  if (variant === "mini") {
+    return (
+      <div
+        className={cn(
+          "relative flex flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg px-2 text-center",
+          className
+        )}
+        style={{ background }}
+      >
+        <Icon className="size-7 shrink-0" style={{ color: meta.color }} strokeWidth={1.75} />
+        <p className="line-clamp-2 font-display text-[11px] leading-tight font-extrabold text-white sm:text-xs">
+          {title}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -25,9 +49,7 @@ export function MoviePoster({
         "relative flex flex-col items-center justify-center overflow-hidden rounded-t-2xl",
         className
       )}
-      style={{
-        background: `radial-gradient(120% 120% at 15% 0%, color-mix(in srgb, ${meta.color} 55%, #16171a) 0%, #16171a 70%)`,
-      }}
+      style={{ background }}
     >
       <Icon
         className="absolute -bottom-6 -right-6 size-40 opacity-15"

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/", label: "Roulette" },
-  { href: "/watchlist", label: "Watchlist" },
+  { href: "/watchlist", label: "Watch Deck" },
 ];
 
 export function SiteNav() {

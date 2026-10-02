@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s · Reel Roulette",
   },
   description:
-    "Can't decide what to watch? Swipe through a roulette of movies, reroll until something clicks, and build a watchlist along the way.",
+    "Can't decide what to watch? Swipe through a roulette of movies, reroll until something clicks, and build a Watch Deck along the way.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

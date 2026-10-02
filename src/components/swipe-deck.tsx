@@ -16,15 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { MoviePoster } from "@/components/movie-poster";
 import { addToWatchlist } from "@/lib/watchlist-client";
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+import { shuffle } from "@/lib/utils";
 
 // A fresh shuffled pass over the whole pool, only ever built once the
 // previous bag is exhausted — never a partial reshuffle while cards from
@@ -119,7 +111,7 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
       setSeenCount((c) => c + 1);
       if (direction === "right") {
         setSavedCount((c) => c + 1);
-        setToast(`Saved "${current.title}" to your watchlist`);
+        setToast(`Saved "${current.title}" to your Watch Deck`);
         void addToWatchlist(current.id);
       } else {
         setToast(`Rerolled "${current.title}"`);
@@ -197,7 +189,7 @@ export function SwipeDeck({ movies }: { movies: Movie[] }) {
         <Button
           size="icon"
           className="size-14 bg-primary text-primary-foreground hover:brightness-110"
-          aria-label="Save to watchlist"
+          aria-label="Save to Watch Deck"
           disabled={!displayedMovie || phase !== "idle"}
           onClick={() => commitSwipe("right")}
         >
