@@ -9,7 +9,7 @@ export function SiteFooter() {
           Reel Roulette
         </p>
         <p className="font-serif text-xs tracking-wide text-paper/80 italic">
-          What is this earth without art? Just a rock.
+          “What is this earth without art? Just a rock.”
         </p>
       </div>
     </footer>
