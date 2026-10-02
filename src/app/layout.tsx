@@ -39,10 +39,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="relative flex flex-1 flex-col overflow-x-clip">
           <SiteNav />
           <StageCurtains />
-          {/* Top padding clears the valance. `isolate` gives the page its own
-              stacking context, so no z-index inside it (e.g. the hovered
-              card in the Watch Deck hand) can rise above the curtains. */}
-          <main className="isolate flex-1 pt-10">{children}</main>
+          {/* `isolate` gives the page its own stacking context, so no z-index
+              inside it (e.g. the hovered card in the Watch Deck hand) can
+              rise above the curtains. */}
+          <main className="isolate flex-1 pt-3">{children}</main>
           <SiteFooter />
         </div>
       </body>

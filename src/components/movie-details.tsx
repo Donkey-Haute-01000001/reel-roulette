@@ -12,10 +12,13 @@ import { cn } from "@/lib/utils";
 export function MovieDetails({
   movie,
   kicker = "Now Showing",
+  compact = false,
   className,
 }: {
   movie: Movie;
   kicker?: string;
+  // Tighter spacing and no ornament, for the placard on the casino table.
+  compact?: boolean;
   className?: string;
 }) {
   const meta = GENRE_META[movie.primary_genre];
@@ -31,7 +34,7 @@ export function MovieDetails({
         : "Starring";
 
   return (
-    <div className={cn("flex flex-col gap-2 text-center text-ink", className)}>
+    <div className={cn("flex flex-col text-center text-ink", compact ? "gap-1.5" : "gap-2", className)}>
       <p className="font-slab text-[9px] tracking-[0.3em] text-crimson uppercase">{kicker}</p>
       <h3 className="text-xl leading-tight text-balance uppercase sm:text-2xl">
         {movie.title}
@@ -43,7 +46,7 @@ export function MovieDetails({
         {[String(movie.release_year), ...others.map((g) => GENRE_META[g]?.label ?? g)].join(" · ")}
       </p>
 
-      <Ornament className="text-ink" />
+      {!compact && <Ornament className="text-ink" />}
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-serif text-xs">
         <span className="inline-flex items-center gap-1">

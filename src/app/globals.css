@@ -226,3 +226,25 @@
     transform: translateY(-6px);
   }
 }
+
+/* The curtain tassels' idle sway: still most of the time, then a small
+   swing and settle. */
+@keyframes tassel-idle {
+  0%,
+  82%,
+  100% {
+    transform: rotate(0deg);
+  }
+  86% {
+    transform: rotate(7deg);
+  }
+  90% {
+    transform: rotate(-5deg);
+  }
+  94% {
+    transform: rotate(2.5deg);
+  }
+  97% {
+    transform: rotate(-1deg);
+  }
+}

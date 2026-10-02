@@ -13,12 +13,15 @@ export function FilterBar({
   value,
   onChange,
   disabled = false,
+  tone = "dark",
   children,
 }: {
   genres: Genre[];
   value: FilterState;
   onChange: (next: FilterState) => void;
   disabled?: boolean;
+  // "dark" for the velvet page; "paper" when set on a broadside panel.
+  tone?: "dark" | "paper";
   children?: React.ReactNode;
 }) {
   const toggleGenre = (slug: GenreSlug) => {
@@ -47,7 +50,9 @@ export function FilterBar({
               "flex h-7 items-center rounded-[3px] border px-2 font-slab text-[8px] tracking-[0.12em] uppercase transition-colors disabled:opacity-50",
               active
                 ? "border-ink text-ink shadow-[inset_0_0_0_1px_rgb(0_0_0/0.25)]"
-                : "border-gold/40 bg-black/25 text-paper/80 hover:border-gold hover:text-paper"
+                : tone === "paper"
+                  ? "border-ink/30 bg-paper-deep/40 text-ink/70 hover:border-ink/70 hover:text-ink"
+                  : "border-gold/40 bg-black/25 text-paper/80 hover:border-gold hover:text-paper"
             )}
             style={active ? { background: meta.color } : undefined}
           >
@@ -60,7 +65,7 @@ export function FilterBar({
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2"
+          className={cn("h-7 px-2", tone === "paper" && "text-crimson hover:bg-crimson/10")}
           disabled={disabled}
           onClick={() => onChange(EMPTY_FILTERS)}
         >

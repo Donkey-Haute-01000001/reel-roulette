@@ -8,7 +8,7 @@ import { Bookmark, Shuffle, Trash2, Undo2, X } from "lucide-react";
 import type { Movie, WatchlistEntry } from "@/lib/types";
 import { addToWatchlist, fetchWatchlist, removeFromWatchlist } from "@/lib/watchlist-client";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { BroadsideBanner } from "@/components/broadside";
+import { GildedTitle } from "@/components/broadside";
 import { CardBack } from "@/components/card-back";
 import { CasinoTable } from "@/components/casino-table";
 import { MovieCard } from "@/components/movie-card";
@@ -21,13 +21,13 @@ import { shuffle } from "@/lib/utils";
 // Where the card on the table came from:
 // - "hand":  played face-up from your hand (slides up from below)
 // - "deck":  dealt face-down off your deck on the felt (flies in from the right, flips)
-// - "house": Hit me — a card you haven't saved yet (flies in from the dealer's side, flips)
+// - "house": Hit me — a card you haven't saved yet (flies in from the house shoe on the left, flips)
 type Source = "hand" | "deck" | "house";
 
 const DEAL_FROM: Record<Source, { x: number; y: number; rotate: number; scale: number }> = {
   hand: { x: 0, y: 220, rotate: -12, scale: 0.6 },
   deck: { x: 420, y: -30, rotate: 28, scale: 0.45 },
-  house: { x: 0, y: -280, rotate: -24, scale: 0.45 },
+  house: { x: -420, y: -30, rotate: -28, scale: 0.45 },
 };
 
 export function WatchDeckScreen({
@@ -108,13 +108,7 @@ export function WatchDeckScreen({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
-      <BroadsideBanner
-        className="mb-4"
-        kicker="The Card Room"
-        lead="Your Personal"
-        title="Watch Deck"
-        subtitle="Survey Your Hand · Deal Yourself a Card · Or Ask the Dealer to “Hit Me”"
-      />
+      <GildedTitle className="mb-3" title="Watch Deck" tagline="Your hand awaits." />
 
       {!isSupabaseConfigured && (
         <p className="broadside mx-auto mb-6 max-w-xl px-4 py-3 text-center font-serif text-sm">
@@ -123,22 +117,29 @@ export function WatchDeckScreen({
       )}
 
       {entries === null ? (
-        <Skeleton className="h-[250px] rounded-[48px] sm:rounded-[140px]" />
+        <Skeleton className="h-[230px] rounded-[48px] sm:rounded-[140px]" />
       ) : (
         <>
-          <div className="mb-3 flex items-center justify-between gap-3">
+          {/* On wider screens the count and Hit Me live on the table itself
+              (the house shoe); phones, where the shoe is hidden, get this row. */}
+          <div className="mb-3 flex items-center justify-between gap-3 sm:hidden">
             <p className="font-slab text-[10px] tracking-[0.2em] text-gold-light uppercase">
               {hand.length} {hand.length === 1 ? "Card" : "Cards"} in Hand
             </p>
             <HitMeButton onClick={hitMe} disabled={housePool.length === 0} />
           </div>
 
-          <CasinoTable deckCount={hand.length} onDeal={dealFromHand}>
+          <CasinoTable
+            deckCount={hand.length}
+            onDeal={dealFromHand}
+            houseDisabled={housePool.length === 0}
+            onHitMe={hitMe}
+          >
             {onTable ? (
               <>
                 <motion.div
                   key={`${onTable.movie.id}-${dealKey}`}
-                  className="w-[130px] shrink-0 [perspective:900px] sm:w-[140px]"
+                  className="w-[116px] shrink-0 [perspective:900px] sm:w-[124px]"
                   initial={{ ...DEAL_FROM[from], opacity: 0 }}
                   animate={{ x: 0, y: 0, scale: 1, rotate: -3, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 240, damping: 24 }}
@@ -164,7 +165,7 @@ export function WatchDeckScreen({
                 </motion.div>
                 <motion.div
                   key={`details-${onTable.movie.id}-${dealKey}`}
-                  className="broadside w-full max-w-md px-4 py-3"
+                  className="broadside w-full max-w-[460px] px-4 py-2.5"
                   initial={{ opacity: 0, y: 12, rotate: 1 }}
                   animate={{ opacity: 1, y: 0, rotate: 0.6 }}
                   transition={{ delay: 0.15, duration: 0.35 }}
@@ -172,8 +173,9 @@ export function WatchDeckScreen({
                   <MovieDetails
                     movie={onTable.movie}
                     kicker={inDeck ? "On the Table" : "Fresh from the House"}
+                    compact
                   />
-                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <div className="mt-2 flex flex-wrap justify-center gap-2">
                     {inDeck ? (
                       <>
                         <Button variant="secondary" size="sm" className="gap-1.5" onClick={clearTable}>

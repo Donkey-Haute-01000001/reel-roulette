@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion } from "motion/react";
 
 import { TABS, tabIndex } from "@/lib/tabs";
+import { cn } from "@/lib/utils";
 
 // Deep burgundy stage velvet: vertical folds catching the light.
 const VELVET =
@@ -46,44 +47,6 @@ const SCROLL_SVG =
   "</svg>";
 const SCROLLS = `url("data:image/svg+xml,${encodeURIComponent(SCROLL_SVG)}")`;
 
-// The valance: a row of draped swags, each edged in gold braid with a gold
-// bead fringe, gathered by a gold rosette where neighbouring swags meet.
-const SWAG_W = 150;
-const SWAG_H = 36;
-const SWAG_SVG = (() => {
-  // Each swag hangs from (0,6) and (150,6), sagging to y=28 in the middle.
-  const at = (t: number) => ({
-    x: 2 * (1 - t) * t * 75 + t * t * SWAG_W,
-    y: (1 - t) * (1 - t) * 6 + 2 * (1 - t) * t * 50 + t * t * 6,
-  });
-  const beads = Array.from({ length: 13 }, (_, i) => at(0.06 + (i * 0.88) / 12))
-    .map(
-      ({ x, y }) =>
-        `<line x1='${x.toFixed(1)}' y1='${y.toFixed(1)}' x2='${x.toFixed(1)}' y2='${(y + 4).toFixed(1)}' stroke='#c9a03c' stroke-width='0.8'/>` +
-        `<circle cx='${x.toFixed(1)}' cy='${(y + 5.6).toFixed(1)}' r='1.8' fill='#e9c766'/>`
-    )
-    .join("");
-  return (
-    `<svg xmlns='http://www.w3.org/2000/svg' width='${SWAG_W}' height='${SWAG_H}' viewBox='0 0 ${SWAG_W} ${SWAG_H}'>` +
-    "<defs><linearGradient id='v' x1='0' y1='0' x2='0' y2='1'>" +
-    "<stop offset='0' stop-color='#3a060b'/><stop offset='0.55' stop-color='#7a1720'/><stop offset='1' stop-color='#4a0a10'/>" +
-    "</linearGradient></defs>" +
-    "<path d='M0 0H150V6Q75 50 0 6Z' fill='url(#v)'/>" +
-    // folds in the swag
-    "<g fill='none' stroke-width='1.5'>" +
-    "<path d='M10 4Q75 38 140 4' stroke='#000' stroke-opacity='0.3'/>" +
-    "<path d='M16 4Q75 33 134 4' stroke='#b8434c' stroke-opacity='0.35'/>" +
-    "<path d='M26 3Q75 24 124 3' stroke='#000' stroke-opacity='0.25'/>" +
-    "</g>" +
-    "<path d='M0 6Q75 50 150 6' fill='none' stroke='#e2b851' stroke-width='2.4'/>" +
-    beads +
-    "<circle cx='0' cy='6' r='4.5' fill='#d9ac48' stroke='#8a6417' stroke-width='0.8'/>" +
-    "<circle cx='150' cy='6' r='4.5' fill='#d9ac48' stroke='#8a6417' stroke-width='0.8'/>" +
-    "</svg>"
-  );
-})();
-const SWAGS = `url("data:image/svg+xml,${encodeURIComponent(SWAG_SVG)}")`;
-
 const SWEEP_S = 0.55;
 
 // "open"    — curtains drawn back, page visible
@@ -92,9 +55,8 @@ const SWEEP_S = 0.55;
 // "opening" — the new page has arrived; drawing back to reveal it
 type Phase = "open" | "closing" | "closed" | "opening";
 
-// A theatre proscenium for every page: a valance of draped swags hanging from
-// the nav, and burgundy velvet drapes tied back at either side with gold cord
-// and tassels. They're part of the page, running from under the nav all the
+// A theatre proscenium for every page: burgundy velvet drapes tied back at
+// either side with gold cord and tassels. They're part of the page, running from under the nav all the
 // way down to the foot of the page, and scroll with it rather than following
 // the window. Pulling a tassel draws that side's curtain across the
 // stage, changes to the neighbouring tab behind it, and draws it back again.
@@ -153,7 +115,7 @@ export function StageCurtains() {
 
       {/* The pulled curtain, drawn across the stage (below the nav) for a tab change */}
       {phase !== "open" && (
-        <div aria-hidden className="fixed inset-x-0 top-14 bottom-0 z-[25] overflow-hidden">
+        <div aria-hidden className="fixed inset-x-0 top-10 bottom-0 z-[25] overflow-hidden">
           <motion.div
             className="absolute inset-y-0 w-full"
             style={{
@@ -189,31 +151,27 @@ export function StageCurtains() {
   );
 }
 
+// Gold braid trim, as on the drapes' leading edges.
+const BRAID =
+  "linear-gradient(90deg, rgb(0 0 0 / 0.35), transparent 30%, transparent 70%, rgb(0 0 0 / 0.35)), repeating-linear-gradient(180deg, #f1d27a 0 3px, #b8862a 3px 5px, #6e4f12 5px 6px)";
+
+// A slim valance under the nav: a thin velvet band with a gold edge and a
+// row of small scalloped swags.
+const SWAGS = "radial-gradient(11px 9px at 50% 0, #000 96%, transparent 100%) 0 0 / 22px 9px repeat-x";
+
 function Valance() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-14 z-30 drop-shadow-[0_6px_6px_rgb(0_0_0/0.45)]"
+      className="pointer-events-none absolute inset-x-0 top-10 z-30 drop-shadow-[0_3px_3px_rgb(0_0_0/0.45)]"
     >
-      {/* The pelmet board, with a gold braid along its foot */}
-      <div className="h-2.5 border-b-2 border-[#e2b851]" style={{ backgroundImage: VELVET }} />
-      {/* Draped swags with bead fringe */}
-      <div
-        className="-mt-px"
-        style={{
-          height: SWAG_H,
-          backgroundImage: SWAGS,
-          backgroundSize: `${SWAG_W}px ${SWAG_H}px`,
-          backgroundRepeat: "repeat-x",
-        }}
-      />
+      <div className="h-1 border-b border-[#e2b851]" style={{ backgroundImage: VELVET }} />
+      <div className="drop-shadow-[0_1px_0_var(--gold)]">
+        <div className="h-[9px]" style={{ backgroundImage: VELVET, WebkitMask: SWAGS, mask: SWAGS }} />
+      </div>
     </div>
   );
 }
-
-// Gold braid trim, as on the drapes' leading edges.
-const BRAID =
-  "linear-gradient(90deg, rgb(0 0 0 / 0.35), transparent 30%, transparent 70%, rgb(0 0 0 / 0.35)), repeating-linear-gradient(180deg, #f1d27a 0 3px, #b8862a 3px 5px, #6e4f12 5px 6px)";
 
 // The drapes only take up the empty margin beside the content (100vw counts
 // the scrollbar, hence the extra allowance), and are only shown from 1200px
@@ -251,7 +209,7 @@ function Drape({ side }: { side: "left" | "right" }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute top-14 bottom-0 z-20 hidden min-[1200px]:block"
+      className="pointer-events-none absolute top-10 bottom-0 z-20 hidden min-[1200px]:block"
       style={{ [side]: 0, width: DRAPE_WIDTH }}
     >
       {/* Gold braid, showing only along the leading edge */}
@@ -288,7 +246,7 @@ function TieBack({
 
   return (
     <div
-      className="pointer-events-none absolute top-14 bottom-0 z-20 hidden min-[1200px]:block"
+      className="pointer-events-none absolute top-10 bottom-0 z-20 hidden min-[1200px]:block"
       style={{ [side]: 0, width: DRAPE_WIDTH }}
     >
       <motion.button
@@ -331,17 +289,31 @@ function TieBack({
             pulled: { rotate: [0, left ? 22 : -22, left ? -10 : 10, 0], y: [0, 12, 0, 0], transition: { duration: 0.6 } },
           }}
         >
-          <Tassel />
+          {/* An idle sway every few seconds, as if caught by a draught, to
+              hint that the tassel can be pulled. The two sides sway at
+              different moments; off for reduced-motion users. */}
+          <span
+            className="block origin-top motion-safe:animate-[tassel-idle_7s_ease-in-out_infinite]"
+            style={{ animationDelay: left ? "1.5s" : "5s" }}
+          >
+            <Tassel />
+          </span>
         </motion.span>
 
-        {/* The destination, shown on hover / focus */}
-        {/* Anchored under the tassel and growing toward the middle of the
-            page, so it can never stick out past the edge of the window. */}
+        {/* The destination, set beside the tassel on the green where the
+            drape is gathered in (always the side toward the page, so it can
+            never stick out past the window). Quiet until hovered / focused. */}
         <span
-          className="pointer-events-none absolute top-[112px] font-slab text-[9px] tracking-[0.2em] whitespace-nowrap text-gold-light uppercase opacity-0 transition-opacity duration-200 [text-shadow:0_1px_3px_rgb(0_0_0/0.9)] group-hover:opacity-100 group-focus-visible:opacity-100"
-          style={{ [left ? "left" : "right"]: "calc(100% - 16px)" }}
+          className={cn(
+            "pointer-events-none absolute top-[38px] flex flex-col leading-tight whitespace-nowrap opacity-70 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100",
+            left ? "items-start text-left" : "items-end text-right"
+          )}
+          style={{ [left ? "left" : "right"]: "calc(100% + 22px)" }}
         >
-          {left ? `◂ ${label}` : `${label} ▸`}
+          <span className="font-serif text-[10px] text-paper/60 italic">pull for</span>
+          <span className="font-slab text-[9px] tracking-[0.25em] text-gold-light uppercase">
+            {label}
+          </span>
         </span>
       </motion.button>
     </div>

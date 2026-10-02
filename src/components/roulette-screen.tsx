@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import type { Genre, Movie, WatchlistEntry } from "@/lib/types";
 import { addToWatchlist, fetchWatchlist } from "@/lib/watchlist-client";
-import { BroadsideBanner } from "@/components/broadside";
+import { GildedTitle } from "@/components/broadside";
 import { RouletteSlot } from "@/components/roulette-slot";
 
 export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: Genre[] }) {
@@ -29,13 +29,7 @@ export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: 
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
-      <BroadsideBanner
-        className="mb-4"
-        kicker="Three Reels · One Picture"
-        lead="Try Your Luck at the"
-        title="Spin"
-        subtitle="Spin Your Watch Deck or the Whole Catalogue · Three Spins Per Day"
-      />
+      <GildedTitle className="mb-4" title="Spin" tagline="Three spins · one flick" />
       <RouletteSlot
         deckMovies={deckMovies}
         catalog={catalog}

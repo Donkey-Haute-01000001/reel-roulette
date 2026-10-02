@@ -8,8 +8,8 @@ import { MovieCard } from "@/components/movie-card";
 
 // Cards are 120px wide in a small hand and shrink (down to 88px) as the hand
 // grows, so a big hand still fits with room for the hovered card.
-const MAX_CARD_W = 110;
-const MIN_CARD_W = 84;
+const MAX_CARD_W = 98;
+const MIN_CARD_W = 78;
 const MAX_SPREAD = 84; // px between card centres when there's room
 const LIFT = 56; // how far the hovered card rises out of the hand
 const HOVER_SCALE = 1.45;
@@ -79,9 +79,12 @@ export function WatchDeckHand({
   // dip a bottom corner as they tilt.
   const drop = 26 + (CARD_W / 2) * Math.sin((edgeTilt * Math.PI) / 180);
   const baseline = Math.ceil(drop) + 8;
-  // Just tall enough for the resting hand: the hovered card rises out of it,
-  // over the bottom of the table, like a hand in Hearthstone.
-  const height = CARD_H + baseline + 20;
+  // The resting cards reach a little below the hand's box (into the empty
+  // space above the footer — nothing clips them, so every card still shows
+  // in full), which lets the page need less height. The hovered card rises
+  // out of the hand, over the bottom of the table, like Hearthstone.
+  const overhang = Math.round(CARD_H * 0.3);
+  const height = CARD_H - overhang + baseline + 12;
 
   const measure = () => {
     rectRef.current = containerRef.current?.getBoundingClientRect() ?? null;
@@ -108,7 +111,7 @@ export function WatchDeckHand({
     if (i !== hoverIndex) setHoverIndex(i);
 
     const cardCenterX = rect.left + rect.width / 2 + (i - half) * spread;
-    const cardCenterY = rect.top + height - baseline - CARD_H / 2 - LIFT;
+    const cardCenterY = rect.top + height - (baseline - overhang) - CARD_H / 2 - LIFT;
     const dx = Math.max(-1, Math.min(1, (e.clientX - cardCenterX) / (CARD_W / 2)));
     const dy = Math.max(-1, Math.min(1, (e.clientY - cardCenterY) / (CARD_H / 2)));
     tiltY.set(dx * 12);
@@ -180,7 +183,7 @@ export function WatchDeckHand({
             className="absolute"
             style={{
               left: "50%",
-              bottom: baseline,
+              bottom: baseline - overhang,
               marginLeft: -CARD_W / 2,
               width: CARD_W,
               transformOrigin: "50% 100%",

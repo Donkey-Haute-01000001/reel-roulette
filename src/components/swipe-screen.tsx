@@ -8,7 +8,7 @@ import { EMPTY_FILTERS, applyFilters, type FilterState } from "@/lib/movie-filte
 import { fetchWatchlist } from "@/lib/watchlist-client";
 import { clearSeen, fetchSeenIds } from "@/lib/seen-client";
 import { Button } from "@/components/ui/button";
-import { BroadsideBanner } from "@/components/broadside";
+import { GildedTitle } from "@/components/broadside";
 import { FilterBar } from "@/components/filter-bar";
 import { SwipeDeck } from "@/components/swipe-deck";
 
@@ -102,19 +102,17 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
-      <BroadsideBanner
-        className="mb-4"
-        kicker="Grand Picture-Show Lottery"
-        lead="Have You Seen It?"
+      {/* Right means "I'd watch this" (rewatches included); left is for
+          pictures you've seen or don't fancy. Signposts match the piles. */}
+      <GildedTitle
+        className="mb-3"
         title="Swipe"
-        subtitle={
-          loading
-            ? "Swipe Right, If It Seems Interesting · Left, If It Doesn’t or You’ve Seen It"
-            : `Swipe Right, If It Seems Interesting · Left, If It Doesn’t or You’ve Seen It · ${remaining} Pictures Remain`
-        }
+        tagline={loading ? "Would you watch it?" : `Would you watch it? · ${remaining} remain`}
+        left={["Seen it /", "not for me"]}
+        right={["Want to watch /", "rewatch it"]}
       />
 
-      <div className="mb-4">
+      <div className="mb-3">
         <FilterBar genres={genres} value={filters} onChange={changeFilters}>
           <Button variant="secondary" size="sm" onClick={reshuffle} className="h-7 gap-1.5">
             <Shuffle className="size-3.5" /> Reshuffle

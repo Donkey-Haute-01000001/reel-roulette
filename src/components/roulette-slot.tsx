@@ -4,10 +4,11 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { animate, motion, useMotionValue, type MotionValue } from "motion/react";
 import Link from "next/link";
-import { Bookmark, Dices, HelpCircle, Layers } from "lucide-react";
+import { Bookmark, Check, Dices, Film, HelpCircle, Layers, type LucideIcon } from "lucide-react";
 
 import type { Genre, Movie } from "@/lib/types";
 import { GENRE_META } from "@/lib/genre-meta";
+import { Ornament } from "@/components/broadside";
 import { EMPTY_FILTERS, applyFilters } from "@/lib/movie-filters";
 import { DAILY_SPINS, getSpinsRemaining, recordSpin } from "@/lib/roulette-client";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -15,14 +16,13 @@ import { FilterBar } from "@/components/filter-bar";
 import { MovieCard } from "@/components/movie-card";
 import { MovieDetails } from "@/components/movie-details";
 import { Button } from "@/components/ui/button";
-import { Segmented } from "@/components/ui/segmented";
 import { CoinSlot, FloatingCoins, Lever, type SlotHint } from "@/components/slot-parts";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn, shuffle } from "@/lib/utils";
 
 type Source = "deck" | "catalog";
 
-const TILE_H = 80;
+const TILE_H = 68;
 // Each reel travels further and stops later than the one to its left, so
 // they land left → middle → right ~350ms apart.
 const REEL_FILLERS = [24, 29, 34];
@@ -100,6 +100,7 @@ export function RouletteSlot({
   }
 
   const pool = source === "deck" ? deckMovies : catalog;
+  const poolLabel = source === "deck" ? "Your Watch Deck" : "The Whole Catalogue";
   const filtered = React.useMemo(() => applyFilters(pool, filters), [pool, filters]);
 
   // Before the first spin the reels just preview the current pool
@@ -213,33 +214,161 @@ export function RouletteSlot({
   };
 
   return (
+    // The casino floor: on laptops and up, three columns — the wager board,
+    // the machine dead centre, and the coin tray with the play status — so
+    // the whole game fits one screen. On phones they stack: board, coins,
+    // machine.
     <div className="flex flex-col items-center gap-4">
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2">
-          <span className="font-slab text-[10px] tracking-[0.2em] text-gold-light uppercase">
-            Spin For:
-          </span>
-          <Segmented
-            label="Spin pool"
-            value={source}
-            onChange={setSource}
-            disabled={spinning}
-            options={[
-              { value: "deck", label: `Watch Deck (${deckMovies.length})` },
-              { value: "catalog", label: `Whole Catalogue (${catalog.length})` },
-            ]}
-          />
-        </div>
-        <FilterBar genres={genres} value={filters} onChange={setFilters} disabled={spinning} />
-      </div>
+      <div className="grid w-full items-center gap-5 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-6">
+        {/* The wager board: what the reels will draw from, set out plainly
+            before any coin goes in, so nobody spends one on the wrong pool.
+            The first of the three steps. */}
+        <section
+          aria-labelledby="wager-heading"
+          className="broadside order-1 w-full max-w-xl justify-self-center px-4 py-3 text-center lg:max-w-[240px] lg:justify-self-end"
+        >
+          <p
+            id="wager-heading"
+            className="mb-1 flex items-center justify-center gap-1.5 font-slab text-[9px] tracking-[0.3em] text-crimson uppercase"
+          >
+            <StepMark n={1} tone="paper" /> Place Your Wager · Spin For
+          </p>
+          <Ornament className="mb-2 text-ink" />
+          <div role="radiogroup" aria-label="Spin for" className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
+            <PoolTicket
+              icon={Layers}
+              title="Your Watch Deck"
+              count={deckMovies.length}
+              selected={source === "deck"}
+              disabled={spinning}
+              onSelect={() => setSource("deck")}
+            />
+            <PoolTicket
+              icon={Film}
+              title="The Whole Catalogue"
+              count={catalog.length}
+              selected={source === "catalog"}
+              disabled={spinning}
+              onSelect={() => setSource("catalog")}
+            />
+          </div>
+          <div className="mt-3">
+            <FilterBar
+              genres={genres}
+              value={filters}
+              onChange={setFilters}
+              disabled={spinning}
+              tone="paper"
+            />
+          </div>
+          <p className="mt-2 font-serif text-xs" aria-live="polite">
+            The reels hold{" "}
+            <strong className="font-bold text-crimson">
+              {filtered.length} {filtered.length === 1 ? "picture" : "pictures"}
+            </strong>{" "}
+            · {poolLabel}
+            {filters.genres.length > 0 &&
+              ` · ${filters.genres.map((g) => GENRE_META[g].label).join(", ")}`}
+          </p>
+        </section>
 
-      {/* The cabinet is always dead centre; the coin tray and lever hang off
-          its sides without shifting it. On phones the side padding makes
-          room for the lever. */}
-      <div className="relative mx-auto w-full max-w-md max-sm:px-10">
-        {/* Coin tray: beside the machine on wide screens, above it otherwise.
-            Layered over the cabinet so a coin flies in front of it. */}
-        <div className="relative z-30 mb-4 flex justify-center lg:absolute lg:top-1/2 lg:right-full lg:mr-8 lg:mb-0 lg:-translate-y-1/2">
+        {/* The machine, dead centre. The lever hangs off its right edge; on
+            phones the side padding makes room for it. */}
+        <div className="order-3 mx-auto w-full max-w-[340px] max-sm:px-10 lg:order-2 lg:w-[340px] lg:max-w-none">
+          <div className="relative">
+            {/* Gold trim around the cabinet */}
+            <div
+              className="rounded-[28px] p-[3px] shadow-2xl shadow-black/60"
+              style={{
+                background: "linear-gradient(160deg, #f6dc8c, #a7791c 35%, #f6dc8c 55%, #8a6417)",
+              }}
+            >
+              <div className="rounded-[25px] bg-gradient-to-b from-[#2c2c33] to-[#121215] p-2.5 sm:p-3">
+                {/* Marquee */}
+                <div className="mb-2.5 rounded-2xl bg-[#0b0b0e] px-4 py-1.5 text-center">
+                  <Bulbs spinning={spinning} won={result !== null} />
+                  <p className="mt-1 font-woodtype text-2xl leading-none tracking-[0.3em] text-[#f6dc8c] [text-shadow:0_0_12px_rgba(246,220,140,0.55)]">
+                    SPIN
+                  </p>
+                  {/* What this pull draws from, right where you pull */}
+                  <p className="mt-1 mb-1 truncate font-mono text-[10px] font-bold tracking-[0.15em] text-amber-400 uppercase [text-shadow:0_0_6px_rgba(251,191,36,0.7)]">
+                    {source === "deck" ? "Watch Deck" : "Whole Catalogue"} · {filtered.length}
+                  </p>
+                  <Bulbs spinning={spinning} won={result !== null} reverse />
+                </div>
+
+                {/* Reel window */}
+                <div className="relative rounded-xl bg-[#0b0b0e] p-1.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.9)]">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[0, 1, 2].map((r) => (
+                      <Reel
+                        key={r}
+                        strip={shownStrips?.[r] ?? null}
+                        y={reelYs[r]}
+                        moving={spinning && landed <= r}
+                        won={landed > r && result !== null}
+                      />
+                    ))}
+                  </div>
+                  {/* Payline through the middle row, with pointers at each end */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0"
+                    style={{ top: 6 + TILE_H * 1.5 - 1 }}
+                  >
+                    <div
+                      className={cn(
+                        "h-0.5 w-full bg-[#e11d2e] transition-opacity",
+                        result ? "opacity-100" : "opacity-50"
+                      )}
+                    />
+                    <span className="absolute top-1/2 -left-0.5 -translate-y-1/2 border-y-[7px] border-l-[9px] border-y-transparent border-l-[#e11d2e]" />
+                    <span className="absolute top-1/2 -right-0.5 -translate-y-1/2 border-y-[7px] border-r-[9px] border-y-transparent border-r-[#e11d2e]" />
+                  </div>
+                </div>
+
+                {/* The control panel: a recessed strip holding three matching
+                    modules — same height, corners, and brass bezel: the spin
+                    counter, the coin slot, and the Spin button. */}
+                <div className="mt-2.5 grid grid-cols-[3.25rem_3.25rem_minmax(0,1fr)] gap-1.5 rounded-xl bg-black/45 p-1.5 shadow-[inset_0_2px_6px_rgb(0_0_0/0.8)]">
+                  <div className="flex h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-md bg-black ring-1 ring-[#8a6417] ring-inset">
+                    <span className="font-slab text-[6px] leading-none tracking-[0.15em] text-[#8a8a92] uppercase">
+                      Spins
+                    </span>
+                    <span className="font-mono text-xl leading-none font-bold text-amber-400 [text-shadow:0_0_8px_rgba(251,191,36,0.7)]">
+                      {spinsLeft ?? "–"}
+                    </span>
+                  </div>
+                  <CoinSlot
+                    ref={slotRef}
+                    credited={credited}
+                    hint={slotHint}
+                    canReturn={!spinning}
+                    onReturn={returnCoin}
+                    className="h-[3.25rem] w-auto"
+                  />
+                  {/* Always just "Spin" (greyed out until a coin is in: the
+                      glowing slot and step ② say what's needed). */}
+                  <Button
+                    className="h-[3.25rem] min-w-0 gap-1.5 rounded-md px-3 text-xs ring-1 ring-[#8a6417] ring-inset"
+                    disabled={!canSpin}
+                    onClick={spin}
+                    title={credited ? undefined : "Insert a coin first"}
+                  >
+                    {!spinning && <Dices className="size-4" />}
+                    {spinning ? "Spinning…" : "Spin"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <Lever theta={leverTheta} enabled={canSpin} onPull={spin} />
+          </div>
+        </div>
+
+        {/* The coin tray and how play stands. Layered over the machine so a
+            coin flies in front of it on its way to the slot. */}
+        <div className="relative z-30 order-2 flex flex-col items-center gap-2 text-center lg:order-3 lg:justify-self-start lg:pl-14">
           <FloatingCoins
             coins={coins ?? []}
             enabled={canInsert}
@@ -247,125 +376,48 @@ export function RouletteSlot({
             onInsert={insertCoin}
             onHint={setSlotHint}
           />
-        </div>
-        <div className="relative">
-          {/* Gold trim around the cabinet */}
-          <div
-            className="rounded-[28px] p-[3px] shadow-2xl shadow-black/60"
-            style={{
-              background: "linear-gradient(160deg, #f6dc8c, #a7791c 35%, #f6dc8c 55%, #8a6417)",
-            }}
-          >
-            <div className="rounded-[25px] bg-gradient-to-b from-[#2c2c33] to-[#121215] p-2.5 sm:p-3">
-              {/* Marquee */}
-              <div className="mb-2.5 rounded-2xl bg-[#0b0b0e] px-4 py-1.5 text-center">
-                <Bulbs spinning={spinning} won={result !== null} />
-                <p className="my-1 font-woodtype text-2xl tracking-[0.3em] text-[#f6dc8c] [text-shadow:0_0_12px_rgba(246,220,140,0.55)]">
-                  SPIN
-                </p>
-                <Bulbs spinning={spinning} won={result !== null} reverse />
-              </div>
-
-              {/* Reel window */}
-              <div className="relative rounded-xl bg-[#0b0b0e] p-1.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.9)]">
-                <div className="grid grid-cols-3 gap-1.5">
-                  {[0, 1, 2].map((r) => (
-                    <Reel
-                      key={r}
-                      strip={shownStrips?.[r] ?? null}
-                      y={reelYs[r]}
-                      moving={spinning && landed <= r}
-                      won={landed > r && result !== null}
-                    />
-                  ))}
-                </div>
-                {/* Payline through the middle row, with pointers at each end */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0"
-                  style={{ top: 6 + TILE_H * 1.5 - 1 }}
-                >
-                  <div
-                    className={cn(
-                      "h-0.5 w-full bg-[#e11d2e] transition-opacity",
-                      result ? "opacity-100" : "opacity-50"
-                    )}
-                  />
-                  <span className="absolute top-1/2 -left-0.5 -translate-y-1/2 border-y-[7px] border-l-[9px] border-y-transparent border-l-[#e11d2e]" />
-                  <span className="absolute top-1/2 -right-0.5 -translate-y-1/2 border-y-[7px] border-r-[9px] border-y-transparent border-r-[#e11d2e]" />
-                </div>
-              </div>
-
-              {/* Controls: spin counter + spin button */}
-              <div className="mt-2.5 flex items-stretch gap-2.5">
-                <div className="flex flex-col items-center justify-center rounded-lg bg-black px-3 py-1">
-                  <span className="text-[9px] font-bold tracking-widest text-[#8a8a92] uppercase">
-                    Spins
-                  </span>
-                  <span className="font-mono text-2xl leading-none font-bold text-amber-400 [text-shadow:0_0_8px_rgba(251,191,36,0.7)]">
-                    {spinsLeft ?? "–"}
-                  </span>
-                </div>
-                <CoinSlot
-                  ref={slotRef}
-                  credited={credited}
-                  hint={slotHint}
-                  canReturn={!spinning}
-                  onReturn={returnCoin}
-                />
-                <Button
-                  size="lg"
-                  className="flex-1 gap-2"
-                  disabled={!canSpin}
-                  onClick={spin}
-                >
-                  <Dices className="size-5" />
-                  {spinning ? "Spinning…" : credited ? "Spin" : "Insert a Coin"}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <Lever theta={leverTheta} enabled={canSpin} onPull={spin} />
-        </div>
-      </div>
-
-      <div className="-mt-3 flex flex-col items-center gap-1">
-        <p className="font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase">
-          {spinsLeft === null
-            ? "Three Spins Per Day"
-            : spinsLeft === 0
-              ? "No Spins Remain Tonight"
-              : `${spinsLeft} ${spinsLeft === 1 ? "Spin Remains" : "Spins Remain"} Tonight`}
-        </p>
-        {!spinning && (
-          <p role="status" className="text-center font-serif text-sm text-paper/80 italic">
-            {blockedReason ??
-              (credited
-                ? "Coin accepted. Now pull the lever all the way down."
-                : "Drop a coin in the slot, then pull the lever.")}
+          <p className="font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase">
+            {spinsLeft === null
+              ? "Three Spins Per Day"
+              : spinsLeft === 0
+                ? "No Spins Remain Tonight"
+                : `${spinsLeft} ${spinsLeft === 1 ? "Spin Remains" : "Spins Remain"} Tonight`}
           </p>
-        )}
-        {credited && !spinning && (
-          <button
-            type="button"
-            onClick={returnCoin}
-            className="font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase underline-offset-4 hover:text-gold-light hover:underline"
-          >
-            ↩ Coin Return
-          </button>
-        )}
+          {blockedReason && !spinning ? (
+            <p role="status" className="max-w-[220px] font-serif text-sm text-paper/80 italic">
+              {blockedReason}
+            </p>
+          ) : (
+            // The remaining steps; the current one is lit, finished ones dim.
+            <ol className="flex flex-col gap-1.5 text-left" aria-label="How to spin">
+              <Step n={2} state={credited || spinning ? "done" : "now"}>
+                Drop a coin in the slot
+              </Step>
+              <Step n={3} state={spinning ? "done" : credited ? "now" : "next"}>
+                Pull the lever all the way down
+              </Step>
+            </ol>
+          )}
+          {credited && !spinning && (
+            <button
+              type="button"
+              onClick={returnCoin}
+              className="font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase underline-offset-4 hover:text-gold-light hover:underline"
+            >
+              ↩ Coin Return
+            </button>
+          )}
+          {result && !spinning && !resultOpen && (
+            <button
+              type="button"
+              onClick={() => setResultOpen(true)}
+              className="max-w-[220px] font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase underline-offset-4 hover:text-gold-light hover:underline"
+            >
+              ✦ Your Pick: {result.title} ✦
+            </button>
+          )}
+        </div>
       </div>
-
-      {result && !spinning && !resultOpen && (
-        <button
-          type="button"
-          onClick={() => setResultOpen(true)}
-          className="-mt-3 font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase underline-offset-4 hover:text-gold-light hover:underline"
-        >
-          ✦ Your Pick: {result.title} ✦
-        </button>
-      )}
 
       <Dialog open={resultOpen && result !== null} onOpenChange={setResultOpen}>
         {/* A bare frame around the card and placard, so the dialog's own
@@ -415,6 +467,105 @@ export function RouletteSlot({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// A small circled step number (①②③).
+function StepMark({ n, tone = "velvet" }: { n: number; tone?: "velvet" | "paper" }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-flex size-4 shrink-0 items-center justify-center rounded-full border font-slab text-[8px] leading-none tracking-normal",
+        tone === "paper" ? "border-crimson text-crimson" : "border-current"
+      )}
+    >
+      {n}
+    </span>
+  );
+}
+
+// One step of play in the right-hand column: lit gold when it's the step
+// to take now, dimmed with a check once done.
+function Step({
+  n,
+  state,
+  children,
+}: {
+  n: number;
+  state: "done" | "now" | "next";
+  children: React.ReactNode;
+}) {
+  return (
+    <li
+      aria-current={state === "now" ? "step" : undefined}
+      className={cn(
+        "flex items-center gap-2 font-serif text-sm transition-colors duration-300",
+        state === "now" && "text-gold-light",
+        state === "next" && "text-paper/55",
+        state === "done" && "text-paper/40 line-through decoration-paper/30"
+      )}
+    >
+      {state === "done" ? (
+        <span aria-hidden className="inline-flex size-4 items-center justify-center rounded-full bg-gold/30 text-paper">
+          <Check className="size-2.5" strokeWidth={3} />
+        </span>
+      ) : (
+        <StepMark n={n} />
+      )}
+      <span className="sr-only">Step {n}: </span>
+      {children}
+    </li>
+  );
+}
+
+// One of the two pools on the wager board, as a big printed ticket. The
+// chosen one is raised, framed in crimson, and stamped with a check.
+function PoolTicket({
+  icon: Icon,
+  title,
+  count,
+  selected,
+  disabled,
+  onSelect,
+}: {
+  icon: LucideIcon;
+  title: string;
+  count: number;
+  selected: boolean;
+  disabled: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      disabled={disabled}
+      onClick={onSelect}
+      className={cn(
+        "relative flex items-center gap-3 rounded-[4px] border-2 px-3 py-2.5 text-left transition-[transform,box-shadow,background-color,opacity] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-crimson disabled:cursor-not-allowed",
+        selected
+          ? "-translate-y-0.5 border-double border-crimson bg-[#fff8e6] shadow-[0_6px_14px_rgb(0_0_0/0.25)]"
+          : "border-ink/25 bg-transparent opacity-60 hover:opacity-90"
+      )}
+    >
+      <Icon className={cn("size-6 shrink-0", selected ? "text-crimson" : "text-ink/60")} strokeWidth={1.75} />
+      <span className="min-w-0">
+        <span className="block font-display text-sm leading-tight uppercase sm:text-base">{title}</span>
+        <span className="block font-slab text-[8px] tracking-[0.18em] text-ink/70 uppercase">
+          {count} {count === 1 ? "Picture" : "Pictures"}
+        </span>
+      </span>
+      {selected && (
+        <span
+          aria-hidden
+          className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full border-2 border-paper bg-crimson text-paper shadow-md"
+        >
+          <Check className="size-3.5" strokeWidth={3} />
+        </span>
+      )}
+    </button>
   );
 }
 

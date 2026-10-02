@@ -5,16 +5,20 @@ import type { GenreSlug } from "@/lib/types";
 import { CardBack } from "@/components/card-back";
 
 // A green-baize card table: polished wooden rail, gold piping, gold printing
-// on the felt (an inner racetrack line and a ring of the ten suits), a
-// scatter of chips at one end and your deck at the other.
+// on the felt (an inner racetrack line and a ring of the ten suits), the
+// house's card shoe at one end (Hit Me) and your own deck at the other (Deal).
 export function CasinoTable({
   children,
   deckCount,
   onDeal,
+  houseDisabled,
+  onHitMe,
 }: {
   children: React.ReactNode;
   deckCount: number;
   onDeal: () => void;
+  houseDisabled: boolean;
+  onHitMe: () => void;
 }) {
   return (
     <section
@@ -28,7 +32,7 @@ export function CasinoTable({
       }}
     >
       <div
-        className="relative isolate flex min-h-[250px] flex-col items-center justify-center gap-5 overflow-hidden rounded-[38px] border-2 border-gold/70 px-5 py-5 sm:flex-row sm:rounded-[140px] sm:px-28 sm:py-5"
+        className="relative isolate flex min-h-[210px] flex-col items-center justify-center gap-5 rounded-[38px] border-2 border-gold/70 px-5 py-4 sm:flex-row sm:rounded-[140px] sm:px-28 sm:py-4"
         style={{
           backgroundColor: "var(--felt)",
           backgroundImage:
@@ -38,7 +42,7 @@ export function CasinoTable({
         }}
       >
         <FeltPrint />
-        <Chips />
+        <HouseShoe disabled={houseDisabled} onHitMe={onHitMe} />
         <HandDeck count={deckCount} onDeal={onDeal} />
         {children}
       </div>
@@ -90,55 +94,56 @@ function FeltPrint() {
   );
 }
 
-const CHIP_COLORS = {
-  crimson: { face: "#a61e22", stripe: "#f3e9d2" },
-  ink: { face: "#1b1612", stripe: "#f3e9d2" },
-  gold: { face: "#c99a2e", stripe: "#1b1612" },
-  cream: { face: "#efe3c6", stripe: "#a61e22" },
-} as const;
+// The house's card shoe: a wooden dealing box with cards slanting out of it.
+// Pressing it is Hit Me — a card from the house you haven't kept yet. A
+// printed notice explains as much on hover / focus.
+function HouseShoe({ disabled, onHitMe }: { disabled: boolean; onHitMe: () => void }) {
+  const tipId = React.useId();
 
-// A short stack of poker chips seen from just above.
-function ChipStack({
-  color,
-  count,
-  x,
-  y,
-}: {
-  color: keyof typeof CHIP_COLORS;
-  count: number;
-  x: number;
-  y: number;
-}) {
-  const { face, stripe } = CHIP_COLORS[color];
   return (
-    <div className="absolute" style={{ left: x, top: y }}>
-      {Array.from({ length: count }).map((_, k) => (
-        <span
-          key={k}
-          className="absolute block size-11 rounded-full"
-          style={{
-            top: -k * 5,
-            background: `repeating-conic-gradient(${face} 0deg 22.5deg, ${stripe} 22.5deg 45deg)`,
-            boxShadow: `0 4px 0 color-mix(in srgb, ${face} 55%, #000), 0 7px 10px rgb(0 0 0 / 0.4)`,
-          }}
-        >
-          <span
-            className="absolute inset-[17%] rounded-full border border-dashed"
-            style={{ background: face, borderColor: stripe }}
-          />
+    <div className="group absolute top-1/2 left-7 z-10 hidden -translate-y-1/2 sm:block">
+      <button
+        type="button"
+        onClick={onHitMe}
+        disabled={disabled}
+        aria-label="Hit Me: deal a card from the house"
+        aria-describedby={tipId}
+        className="flex flex-col items-center gap-2 outline-none disabled:opacity-50"
+      >
+        <div className="relative h-[86px] w-[70px] transition-transform duration-200 group-hover:-translate-y-1 group-active:translate-y-0">
+          {/* Cards slanting out of the shoe's mouth */}
+          <div className="absolute top-1 left-3 w-[46px] -rotate-[14deg]">
+            <CardBack className="shadow-[0_2px_4px_rgb(0_0_0/0.4)]" />
+          </div>
+          <div className="absolute top-2.5 left-2 w-[46px] -rotate-[8deg]">
+            <CardBack className="shadow-[0_2px_4px_rgb(0_0_0/0.4)]" />
+          </div>
+          {/* The shoe */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-[52px] rounded-[6px] border border-[#a7791c] shadow-[0_6px_12px_rgb(0_0_0/0.5)]"
+            style={{ background: "linear-gradient(180deg, #6b3f1c, #3c220e)" }}
+          >
+            <div className="absolute inset-x-2 top-1.5 h-px bg-[#d4a531]/70" />
+            <p className="absolute inset-x-0 bottom-1.5 text-center font-woodtype text-[10px] text-[#f1d27a]">
+              House
+            </p>
+          </div>
+        </div>
+        <span className="rounded-[3px] border border-gold/70 bg-crimson px-2 py-1 font-slab text-[8px] tracking-[0.2em] text-paper uppercase shadow-[inset_0_0_0_1px_rgb(0_0_0/0.25)] group-hover:brightness-115">
+          Hit Me
         </span>
-      ))}
-    </div>
-  );
-}
-
-function Chips() {
-  return (
-    <div aria-hidden className="pointer-events-none absolute top-1/2 left-7 hidden h-28 w-24 -translate-y-1/2 sm:block">
-      <ChipStack color="crimson" count={5} x={2} y={30} />
-      <ChipStack color="ink" count={3} x={40} y={56} />
-      <ChipStack color="gold" count={2} x={36} y={6} />
-      <ChipStack color="cream" count={1} x={8} y={74} />
+      </button>
+      <div
+        id={tipId}
+        role="tooltip"
+        className="broadside pointer-events-none absolute top-1/2 left-full z-50 ml-4 w-56 -translate-y-1/2 px-3 py-2 text-left font-serif text-xs leading-snug opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
+      >
+        <span className="font-slab text-[9px] tracking-[0.2em] text-crimson uppercase">Hit Me</span>
+        <br />
+        {disabled
+          ? "Every picture in the house already sits in your deck. The dealer has nothing new to offer."
+          : "The dealer draws a fresh card from the house, a picture not yet in your Watch Deck. Should it please you, add it to your deck."}
+      </div>
     </div>
   );
 }

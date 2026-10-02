@@ -267,8 +267,8 @@ function FloatingCoin({
 // glow once a coin is in, when pressing it works the coin return.
 export const CoinSlot = React.forwardRef<
   HTMLButtonElement,
-  { credited: boolean; hint: SlotHint; onReturn: () => void; canReturn: boolean }
->(function CoinSlot({ credited, hint, onReturn, canReturn }, ref) {
+  { credited: boolean; hint: SlotHint; onReturn: () => void; canReturn: boolean; className?: string }
+>(function CoinSlot({ credited, hint, onReturn, canReturn, className }, ref) {
   const over = !credited && hint === "over";
   const near = !credited && hint === "near";
 
@@ -281,15 +281,16 @@ export const CoinSlot = React.forwardRef<
       aria-label={credited ? "Coin inserted. Press to return it" : "Coin slot: insert a coin"}
       title={credited ? "Coin return" : "Insert a coin"}
       className={cn(
-        "flex w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-[#7a5512] px-1 py-1.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_4px_rgb(0_0_0/0.5)] outline-none transition-[filter,transform,box-shadow] duration-200 enabled:cursor-pointer enabled:hover:brightness-110 focus-visible:ring-2 focus-visible:ring-gold-light disabled:cursor-default",
+        "flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border border-[#7a5512] px-1 py-1.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_4px_rgb(0_0_0/0.5)] outline-none transition-[filter,transform,box-shadow] duration-200 enabled:cursor-pointer enabled:hover:brightness-110 focus-visible:ring-2 focus-visible:ring-gold-light disabled:cursor-default",
         over && "scale-110 brightness-125 shadow-[0_0_18px_4px_rgb(252_211_77/0.55)]",
-        near && "brightness-110"
+        near && "brightness-110",
+        className
       )}
       style={{ background: "linear-gradient(180deg, #f6dc8c, #c99a2e 55%, #8a6417)" }}
     >
       <span
         className={cn(
-          "block h-6 w-1.5 rounded-full transition-[background-color,box-shadow] duration-200",
+          "block h-5 w-1.5 rounded-full transition-[background-color,box-shadow] duration-200",
           credited || over
             ? "bg-amber-200 shadow-[0_0_12px_4px_rgb(252_211_77/0.85)]"
             : near
@@ -297,8 +298,11 @@ export const CoinSlot = React.forwardRef<
               : "bg-[#1a1206] shadow-[inset_0_1px_2px_rgb(0_0_0/0.9)]"
         )}
       />
-      <span className="font-slab text-[6px] leading-none tracking-[0.1em] whitespace-nowrap text-[#2a1d08] uppercase">
-        {credited ? "Credit 1" : over ? "Drop It!" : "Insert Coin"}
+      {/* Two short lines, so the wide woodtype fits the small plate */}
+      <span className="flex flex-col items-center font-slab text-[6px] leading-[1.3] tracking-[0.08em] text-[#2a1d08] uppercase">
+        {(credited ? ["Credit", "1"] : over ? ["Drop", "It!"] : ["Insert", "Coin"]).map((line) => (
+          <span key={line}>{line}</span>
+        ))}
       </span>
     </button>
   );
@@ -308,7 +312,7 @@ export const CoinSlot = React.forwardRef<
 // Lever
 // ---------------------------------------------------------------------------
 
-const ARM = 92; // arm length, pivot to knob centre
+const ARM = 80; // arm length, pivot to knob centre
 const PERSPECTIVE = 420;
 
 // A one-armed bandit's lever, seen from the front: a chrome arm on a pivot

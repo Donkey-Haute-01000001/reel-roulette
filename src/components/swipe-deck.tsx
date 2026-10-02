@@ -36,9 +36,10 @@ function nextBag(pool: Movie[], excludeId: number | null): Movie[] {
 
 const SWIPE_THRESHOLD = 110;
 
-// Sized off the window height (leaving room for the nav, header, filters and
-// buttons) so the whole swipe screen fits without scrolling.
-const CARD_HEIGHT = "clamp(260px, calc(100dvh - 400px), 460px)";
+// Sized off the window height (leaving room for the nav, the ribbon banner,
+// filters and buttons, plus some breathing room — 375px in all) so the whole
+// swipe screen fits without scrolling, and grows on taller screens.
+const CARD_HEIGHT = "clamp(240px, calc(100dvh - 375px), 420px)";
 // The Discard / Keep piles either side of the card, at 42% of its size.
 const PILE_SCALE = 0.42;
 const PILE_WIDTH = `calc(${CARD_HEIGHT} * ${(5 / 7) * PILE_SCALE})`;
@@ -269,7 +270,7 @@ export function SwipeDeck({
         />
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-4">
+      <div className="mt-3 flex items-center justify-center gap-4">
         <Button
           size="icon"
           variant="outline"
@@ -300,7 +301,8 @@ export function SwipeDeck({
         </Button>
       </div>
 
-      <p className="mt-3 font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase">
+      {/* The piles show these counts on wider screens; phones hide the piles. */}
+      <p className="mt-3 font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase sm:hidden">
         {seenCount} {seenCount === 1 ? "Card" : "Cards"} Played · {savedCount} Saved
       </p>
 
