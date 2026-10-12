@@ -68,22 +68,44 @@ const COIN_SPOTS = [
   { x: 42, y: -6 },
 ];
 
+// Lets the machine toss in the next coin itself (when the slot is clicked).
+export type FloatingCoinsHandle = { insertNext: () => void };
+type FloatingCoinHandle = { flyIn: () => void };
+
 // The day's coins (one per spin left), hovering over a velvet-lined brass
-// tray beside the machine. Drag one into the slot, or click it, and it flies
-// in and drops through.
+// tray beside the machine. Drag one into the slot, or click it (or the slot
+// itself), and it flies in and drops through. One coin at a time: while one
+// is in flight the others stay put.
 export function FloatingCoins({
+  ref,
   coins,
   enabled,
   slotRef,
   onInsert,
   onHint,
 }: {
+  ref?: React.Ref<FloatingCoinsHandle>;
   coins: number[];
   enabled: boolean;
   slotRef: React.RefObject<HTMLElement | null>;
   onInsert: (id: number) => void;
   onHint: (hint: SlotHint) => void;
 }) {
+  const coinRefs = React.useRef(new Map<number, FloatingCoinHandle>());
+  const [inFlight, setInFlight] = React.useState<number | null>(null);
+
+  React.useImperativeHandle(ref, () => ({
+    insertNext: () => {
+      if (!enabled || inFlight !== null || coins.length === 0) return;
+      coinRefs.current.get(coins[0])?.flyIn();
+    },
+  }));
+
+  const landed = (id: number) => {
+    setInFlight(null);
+    onInsert(id);
+  };
+
   return (
     <div className="flex shrink-0 flex-col items-center gap-2">
       <div className="relative h-32 w-44" role="group" aria-label="Your coins for tonight">
@@ -109,11 +131,16 @@ export function FloatingCoins({
         {coins.map((id) => (
           <FloatingCoin
             key={id}
+            ref={(handle) => {
+              if (handle) coinRefs.current.set(id, handle);
+              else coinRefs.current.delete(id);
+            }}
             id={id}
             at={COIN_SPOTS[id % COIN_SPOTS.length]}
-            enabled={enabled}
+            enabled={enabled && (inFlight === null || inFlight === id)}
             slotRef={slotRef}
-            onInsert={onInsert}
+            onFlightStart={() => setInFlight(id)}
+            onInsert={landed}
             onHint={onHint}
           />
         ))}
@@ -126,21 +153,25 @@ export function FloatingCoins({
 }
 
 function FloatingCoin({
+  ref,
   id,
   at,
   enabled,
   slotRef,
+  onFlightStart,
   onInsert,
   onHint,
 }: {
+  ref?: React.Ref<FloatingCoinHandle>;
   id: number;
   at: { x: number; y: number };
   enabled: boolean;
   slotRef: React.RefObject<HTMLElement | null>;
+  onFlightStart: () => void;
   onInsert: (id: number) => void;
   onHint: (hint: SlotHint) => void;
 }) {
-  const ref = React.useRef<HTMLButtonElement>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
   const [lifted, setLifted] = React.useState(false); // picked up or in flight
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -165,9 +196,10 @@ function FloatingCoin({
   // Toss the coin into the slot from wherever it is now, then drop it in.
   const flyIn = async () => {
     const slot = slotRef.current?.getBoundingClientRect();
-    const me = ref.current?.getBoundingClientRect();
-    if (!slot || !me) return;
+    const me = buttonRef.current?.getBoundingClientRect();
+    if (!slot || !me || flying) return;
     setFlying(true);
+    onFlightStart();
     onHint("over");
     const dx = slot.left + slot.width / 2 - (me.left + me.width / 2);
     const dy = slot.top + slot.height / 2 - (me.top + me.height / 2);
@@ -187,6 +219,8 @@ function FloatingCoin({
     onInsert(id);
   };
 
+  React.useImperativeHandle(ref, () => ({ flyIn: () => void flyIn() }));
+
   return (
     <>
       {/* Its shadow on the tray, breathing with the bob */}
@@ -202,7 +236,7 @@ function FloatingCoin({
         />
       )}
       <motion.button
-        ref={ref}
+        ref={buttonRef}
         type="button"
         aria-label="Insert this coin"
         title="Drop me in the slot"
@@ -264,11 +298,21 @@ function FloatingCoin({
 
 // The brass coin slot. It glows softly when you pick up a coin, lights up
 // bright with "Drop It!" when the coin is right over it, and holds a steady
-// glow once a coin is in, when pressing it works the coin return.
+// glow once a coin is in. Pressing it puts in the next coin from the tray
+// (which flies over, just as if you'd clicked it), or once a coin is in,
+// works the coin return.
 export const CoinSlot = React.forwardRef<
   HTMLButtonElement,
-  { credited: boolean; hint: SlotHint; onReturn: () => void; canReturn: boolean; className?: string }
->(function CoinSlot({ credited, hint, onReturn, canReturn, className }, ref) {
+  {
+    credited: boolean;
+    hint: SlotHint;
+    onInsert: () => void;
+    canInsert: boolean;
+    onReturn: () => void;
+    canReturn: boolean;
+    className?: string;
+  }
+>(function CoinSlot({ credited, hint, onInsert, canInsert, onReturn, canReturn, className }, ref) {
   const over = !credited && hint === "over";
   const near = !credited && hint === "near";
 
@@ -276,8 +320,8 @@ export const CoinSlot = React.forwardRef<
     <button
       ref={ref}
       type="button"
-      onClick={onReturn}
-      disabled={!credited || !canReturn}
+      onClick={credited ? onReturn : onInsert}
+      disabled={credited ? !canReturn : !canInsert}
       aria-label={credited ? "Coin inserted. Press to return it" : "Coin slot: insert a coin"}
       title={credited ? "Coin return" : "Insert a coin"}
       className={cn(

@@ -1,0 +1,100 @@
+# Lint → build, and deploy only by hand. There's no test suite yet, so the
+# build is the test gate.
+#
+# - Pull requests and pushes to main: lint and build only. Nothing deploys;
+#   the build is kept as an artifact to inspect.
+# - Deploying: Actions → CI → "Run workflow" on main. That run lints, builds
+#   with the Vercel CLI, and deploys that very output to production
+#   (`vercel deploy --prebuilt`), so what passed is what ships.
+#
+# Deploying needs three repository secrets (Settings → Secrets and
+# variables → Actions): VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  # Automatic runs: a plain production build. No secrets needed (Supabase
+  # is only called at request time, never during the build).
+  build:
+    needs: lint
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next/
+            !.next/cache/
+          include-hidden-files: true
+          retention-days: 7
+
+  # Manual runs only: the same build through the Vercel CLI (with the
+  # production env vars), kept as the artifact the deploy job ships.
+  build-for-deploy:
+    needs: lint
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx --yes vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - run: npx --yes vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vercel-output
+          path: .vercel/output/
+          include-hidden-files: true
+          retention-days: 7
+
+  deploy:
+    needs: build-for-deploy
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: vercel-output
+          path: .vercel/output/
+      - run: npx --yes vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

@@ -18,12 +18,18 @@ import { cn } from "@/lib/utils";
 // outer div is the size container; cqw on the face itself would resolve
 // against the *page*, not the card, so the face lives one level down.
 // Memoised: the Watch Deck hand re-renders on every hover change, but a
-// card's face only depends on its movie.
+// card's face only depends on its props.
+//
+// A card you've watched ("Seen It") has its top-right corner turned down,
+// the way you'd dog-ear a page. That corner of the card is bare margin (the
+// indices sit top-left and bottom-right), so the fold covers nothing.
 export const MovieCard = React.memo(function MovieCard({
   movie,
+  watched = false,
   className,
 }: {
   movie: Movie;
+  watched?: boolean;
   className?: string;
 }) {
   const meta = GENRE_META[movie.primary_genre];
@@ -39,7 +45,11 @@ export const MovieCard = React.memo(function MovieCard({
           "card-stock relative aspect-[5/7] w-full overflow-hidden rounded-[6cqw] border border-[#d3c39f] text-[#1c1b19]",
           className
         )}
+        // The folded-over corner is cut away from the card itself. The cut
+        // runs out well past the edges so the card's shadow isn't clipped.
+        style={watched ? { clipPath: DOG_EAR_CLIP } : undefined}
       >
+        {watched && <DogEar />}
         <CornerIndex rank={rank} icon={meta.icon} color={ink} className="top-[4cqw] left-[1.5cqw]" />
         <CornerIndex
           rank={rank}
@@ -75,10 +85,10 @@ export const MovieCard = React.memo(function MovieCard({
               <Medallion icon={meta.icon} color={meta.color} />
             </div>
 
-            <p className="line-clamp-3 w-full px-[1cqw] font-display text-[6.8cqw] leading-[1.12] text-balance">
+            <p className="line-clamp-3 w-full px-[1cqw] font-card text-[6.8cqw] leading-[1.12] text-balance">
               {movie.title}
             </p>
-            <p className="mt-[1.5cqw] inline-flex items-center gap-[3cqw] font-serif text-[4.8cqw] font-bold text-[#6b6457]">
+            <p className="mt-[1.5cqw] inline-flex items-center gap-[3cqw] font-serif text-[4.8cqw] text-[#5c564a]">
               <span className="inline-flex items-center gap-[1cqw]">
                 <Clock className="size-[4.4cqw]" />
                 {movie.runtime_minutes} min
@@ -95,7 +105,42 @@ export const MovieCard = React.memo(function MovieCard({
   );
 });
 
-// A card's corner index: rank over suit, printed in the margin.
+const DOG_EAR = "15cqw";
+const DOG_EAR_CLIP = `polygon(-100px -100px, calc(100% - ${DOG_EAR} - 100px) -100px, calc(100% + 100px) calc(${DOG_EAR} + 100px), calc(100% + 100px) calc(100% + 100px), -100px calc(100% + 100px))`;
+
+// The turned-down corner: the back of the card stock, folded over along the
+// cut, casting a little shadow onto the face.
+function DogEar() {
+  return (
+    <div
+      className="absolute top-0 right-0 z-10 drop-shadow-[-1px_1px_1.5px_rgb(60_40_10/0.45)]"
+      style={{ width: DOG_EAR, height: DOG_EAR }}
+    >
+      <span className="sr-only">Seen it</span>
+      <div
+        aria-hidden
+        className="h-full w-full"
+        style={{
+          clipPath: "polygon(0 0, 100% 100%, 0 100%)",
+          background: "linear-gradient(225deg, #e4d4ae 40%, #cbb68a)",
+        }}
+      />
+    </div>
+  );
+}
+
+// How far each rank's ink sits right of its own centre in Rye (measured
+// from the font's outlines, tracking included), in em. The index pulls it
+// back so the rank stands square over its suit.
+const RANK_NUDGE: Record<string, number> = {
+  A: 0.03, K: 0.061, Q: 0.069, J: 0.015, "10": 0.051, "9": 0.03, "8": 0.03,
+  "7": 0.047, "6": 0.046, "5": 0.048, "4": 0.019, "3": 0.052, "2": 0.052,
+};
+
+// A card's corner index: rank over suit, printed in the margin. The rank is
+// set in the Rye woodtype, not IM Fell: Fell's Q has a long swash tail that
+// runs across the frame, and its old-style numerals sit at uneven heights,
+// where Rye's letters and figures all stand the same height.
 function CornerIndex({
   rank,
   icon: Icon,
@@ -115,13 +160,14 @@ function CornerIndex({
     >
       <span
         className={cn(
-          "font-serif font-bold tracking-[-0.06em]",
+          "font-woodtype tracking-[-0.06em]",
           rank.length > 1 ? "text-[6.5cqw]" : "text-[8cqw]"
         )}
+        style={{ translate: `-${RANK_NUDGE[rank] ?? 0}em 0` }}
       >
         {rank}
       </span>
-      <Icon className="mt-[0.8cqw] size-[6.5cqw]" strokeWidth={2.5} />
+      <Icon className="mt-[1.4cqw] size-[6.5cqw]" strokeWidth={2.5} />
     </div>
   );
 }

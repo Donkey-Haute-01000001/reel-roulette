@@ -4,7 +4,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { animate, motion, useMotionValue, type MotionValue } from "motion/react";
 import Link from "next/link";
-import { Bookmark, Check, Dices, Film, HelpCircle, Layers, type LucideIcon } from "lucide-react";
+import { Bookmark, Check, Dices, Eye, Film, HelpCircle, Layers, X, type LucideIcon } from "lucide-react";
 
 import type { Genre, Movie } from "@/lib/types";
 import { GENRE_META } from "@/lib/genre-meta";
@@ -16,7 +16,14 @@ import { FilterBar } from "@/components/filter-bar";
 import { MovieCard } from "@/components/movie-card";
 import { MovieDetails } from "@/components/movie-details";
 import { Button } from "@/components/ui/button";
-import { CoinSlot, FloatingCoins, Lever, type SlotHint } from "@/components/slot-parts";
+import {
+  CoinSlot,
+  FloatingCoins,
+  Lever,
+  type FloatingCoinsHandle,
+  type SlotHint,
+} from "@/components/slot-parts";
+import { HelpTip } from "@/components/help-tip";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn, shuffle } from "@/lib/utils";
 
@@ -53,13 +60,21 @@ export function RouletteSlot({
   catalog,
   genres,
   savedIds,
+  watchedIds,
   onSave,
+  onPass,
+  onToggleWatched,
 }: {
   deckMovies: Movie[];
   catalog: Movie[];
   genres: Genre[];
   savedIds: Set<number>;
+  // Pictures marked "Seen It" (their corner is turned down).
+  watchedIds: Set<number>;
   onSave: (movie: Movie) => Promise<boolean>;
+  // Turning down a pick: it goes on the discard pile, like a left swipe.
+  onPass: (movie: Movie) => void;
+  onToggleWatched: (movie: Movie) => void;
 }) {
   const [source, setSource] = React.useState<Source>("deck");
   const [filters, setFilters] = React.useState(EMPTY_FILTERS);
@@ -84,6 +99,8 @@ export function RouletteSlot({
   // Which coin is in the slot, so Coin Return can give that one back.
   const [insertedCoin, setInsertedCoin] = React.useState<number | null>(null);
   const slotRef = React.useRef<HTMLButtonElement>(null);
+  // Clicking the slot itself tosses in the next coin from the tray.
+  const coinsRef = React.useRef<FloatingCoinsHandle>(null);
   const [slotHint, setSlotHint] = React.useState<SlotHint>("idle");
   // The result placard pops up over the page when the reels land; it can be
   // closed and reopened from the line under the machine.
@@ -195,6 +212,13 @@ export function RouletteSlot({
     }
   };
 
+  const handlePass = () => {
+    if (!result) return;
+    onPass(result);
+    setResultOpen(false);
+    setResult(null);
+  };
+
   const canSpin = !spinning && blockedReason === null && credited;
   const canInsert = !spinning && blockedReason === null && !credited;
 
@@ -232,6 +256,11 @@ export function RouletteSlot({
             className="mb-1 flex items-center justify-center gap-1.5 font-slab text-[9px] tracking-[0.3em] text-crimson uppercase"
           >
             <StepMark n={1} tone="paper" /> Place Your Wager · Spin For
+            <HelpTip title="Your Wager" tone="ink">
+              Choose what the reels draw from: only the pictures in your Watch Deck, or the whole
+              catalogue. Pick genres and the rest below to narrow it further. The count beneath tells
+              you how many pictures the reels hold.
+            </HelpTip>
           </p>
           <Ornament className="mb-2 text-ink" />
           <div role="radiogroup" aria-label="Spin for" className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
@@ -263,7 +292,7 @@ export function RouletteSlot({
           </div>
           <p className="mt-2 font-serif text-xs" aria-live="polite">
             The reels hold{" "}
-            <strong className="font-bold text-crimson">
+            <strong className="font-normal text-crimson">
               {filtered.length} {filtered.length === 1 ? "picture" : "pictures"}
             </strong>{" "}
             · {poolLabel}
@@ -343,6 +372,8 @@ export function RouletteSlot({
                     ref={slotRef}
                     credited={credited}
                     hint={slotHint}
+                    canInsert={canInsert && (coins?.length ?? 0) > 0}
+                    onInsert={() => coinsRef.current?.insertNext()}
                     canReturn={!spinning}
                     onReturn={returnCoin}
                     className="h-[3.25rem] w-auto"
@@ -367,9 +398,12 @@ export function RouletteSlot({
         </div>
 
         {/* The coin tray and how play stands. Layered over the machine so a
-            coin flies in front of it on its way to the slot. */}
-        <div className="relative z-30 order-2 flex flex-col items-center gap-2 text-center lg:order-3 lg:justify-self-start lg:pl-14">
+            coin flies in front of it on its way to the slot. Only its
+            contents take the pointer: its left padding lies over the lever's
+            knob, and would otherwise swallow grabs on it. */}
+        <div className="pointer-events-none relative z-30 order-2 flex flex-col items-center gap-2 text-center *:pointer-events-auto lg:order-3 lg:justify-self-start lg:pl-14">
           <FloatingCoins
+            ref={coinsRef}
             coins={coins ?? []}
             enabled={canInsert}
             slotRef={slotRef}
@@ -424,43 +458,73 @@ export function RouletteSlot({
             card styling doesn't fight the paper. */}
         <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto border-0 bg-transparent p-3 text-ink shadow-none">
           {result && (
+            // Card and placard side by side, centred on each other. Each
+            // side carries its own controls: Seen It under the card (it
+            // turns the card's corner down), the decision on the placard.
             <motion.div
               key={`${result.id}-${spinsLeft}`}
-              className="flex flex-col items-center gap-5 sm:flex-row sm:items-start"
+              className="flex flex-col items-center gap-5 sm:flex-row"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
             >
               <DialogTitle className="sr-only">Your pick: {result.title}</DialogTitle>
               <DialogDescription className="sr-only">The reels landed on {result.title}.</DialogDescription>
-              <motion.div
-                className="w-[160px] shrink-0"
-                initial={{ rotateY: 90 }}
-                animate={{ rotateY: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              >
-                <MovieCard movie={result} className="shadow-2xl shadow-black/60" />
-              </motion.div>
-              <div className="broadside w-full px-5 py-4">
+              <div className="flex shrink-0 flex-col items-center gap-3">
+                <motion.div
+                  className="w-[190px]"
+                  initial={{ rotateY: 90 }}
+                  animate={{ rotateY: 0 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                  <MovieCard
+                    movie={result}
+                    watched={watchedIds.has(result.id)}
+                    className="shadow-2xl shadow-black/60"
+                  />
+                </motion.div>
+                {!savedIds.has(result.id) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-pressed={watchedIds.has(result.id)}
+                    className={cn(
+                      "gap-1.5",
+                      watchedIds.has(result.id) && "border-gold bg-gold/20 text-gold-light hover:bg-gold/30"
+                    )}
+                    onClick={() => onToggleWatched(result)}
+                  >
+                    <Eye className="size-3.5" /> {watchedIds.has(result.id) ? "Seen It ✓" : "Seen It"}
+                  </Button>
+                )}
+              </div>
+              <div className="broadside w-full px-6 py-5">
                 <MovieDetails movie={result} kicker="The Reels Have Spoken" />
-                <div className="mt-3 flex flex-col items-center gap-2">
-                  {savedIds.has(result.id) ? (
+                {savedIds.has(result.id) ? (
+                  <div className="mt-4 flex justify-center">
                     <Button asChild className="gap-1.5">
                       <Link href={`/watchlist?play=${result.id}`}>
                         <Layers className="size-4" /> See It on the Table
                       </Link>
                     </Button>
-                  ) : (
+                  </div>
+                ) : (
+                  // A pick you haven't kept yet: keep it, or pass on it, as
+                  // two equal halves.
+                  <div className="mx-auto mt-4 grid max-w-sm grid-cols-2 gap-2">
                     <Button onClick={handleSave} disabled={saving} className="gap-1.5">
                       <Bookmark className="size-4" /> {saving ? "Adding…" : "Add to Watch Deck"}
                     </Button>
-                  )}
-                  {saveFailed && (
-                    <p role="alert" className="font-serif text-xs text-crimson italic">
-                      The house couldn&apos;t file it just now. Pray try again.
-                    </p>
-                  )}
-                </div>
+                    <Button variant="secondary" onClick={handlePass} disabled={saving} className="gap-1.5">
+                      <X className="size-4" /> Pass
+                    </Button>
+                  </div>
+                )}
+                {saveFailed && (
+                  <p role="alert" className="mt-2 text-center font-serif text-xs text-crimson italic">
+                    The house couldn&apos;t file it just now. Pray try again.
+                  </p>
+                )}
               </div>
             </motion.div>
           )}

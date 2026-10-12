@@ -11,7 +11,7 @@ import { MovieCard } from "@/components/movie-card";
 const MAX_CARD_W = 98;
 const MIN_CARD_W = 78;
 const MAX_SPREAD = 84; // px between card centres when there's room
-const LIFT = 56; // how far the hovered card rises out of the hand
+const LIFT = 36; // how far the hovered card rises out of the hand
 const HOVER_SCALE = 1.45;
 const PLAY_THRESHOLD = 110; // drag a card this far up to play it
 const SPRING = { type: "spring", stiffness: 420, damping: 32, mass: 0.7 } as const;
@@ -20,11 +20,19 @@ const SPRING = { type: "spring", stiffness: 420, damping: 32, mass: 0.7 } as con
 // fanned in an arc along the bottom, the one under the pointer lifts, grows
 // and straightens while its neighbours slide out of the way. Click a card,
 // or drag it up out of the hand, to play it to the table.
+//
+// `tucked`: the resting hand sinks so only the top three fifths of each card peek
+// up from the bottom of the screen, making room for the table above (the
+// Watch Deck keeps it tucked). The hovered card still rises out in full.
 export function WatchDeckHand({
   movies,
+  watchedIds,
+  tucked = false,
   onPlay,
 }: {
   movies: Movie[];
+  watchedIds?: Set<number>;
+  tucked?: boolean;
   onPlay: (movie: Movie) => void;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -84,7 +92,10 @@ export function WatchDeckHand({
   // in full), which lets the page need less height. The hovered card rises
   // out of the hand, over the bottom of the table, like Hearthstone.
   const overhang = Math.round(CARD_H * 0.3);
-  const height = CARD_H - overhang + baseline + 12;
+  // How far a tucked hand sinks: the box shrinks by this much and the
+  // resting cards drop by it, their lower part clipped off at the bottom.
+  const tuck = tucked ? Math.round(CARD_H * 0.38) : 0;
+  const height = CARD_H - overhang + baseline + 12 - tuck;
 
   const measure = () => {
     rectRef.current = containerRef.current?.getBoundingClientRect() ?? null;
@@ -129,7 +140,9 @@ export function WatchDeckHand({
       role="listbox"
       aria-label="Your hand"
       tabIndex={0}
-      className="relative w-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="relative w-full rounded-2xl transition-[height] duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      // The outer cards' dipped corners, and a tucked hand's lower part, run
+      // off the foot of the screen: the Watch Deck page clips them there.
       style={{ height }}
       onPointerEnter={measure}
       onPointerMove={handlePointerMove}
@@ -154,7 +167,7 @@ export function WatchDeckHand({
         const isDragging = i === dragIndex;
 
         let x = t * spread;
-        let y = t * t * arc;
+        let y = t * t * arc + tuck;
         let rotate = t * tilt;
         let scale = 1;
         if (isActive) {
@@ -225,6 +238,7 @@ export function WatchDeckHand({
               >
                 <MovieCard
                   movie={movie}
+                  watched={watchedIds?.has(movie.id)}
                   className={isActive ? "shadow-2xl shadow-black/60" : "shadow-lg shadow-black/40"}
                 />
               </motion.div>

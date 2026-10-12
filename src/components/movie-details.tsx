@@ -55,7 +55,7 @@ export function MovieDetails({
         <span className="inline-flex items-center gap-1">
           <Clock className="size-3.5" /> {movie.runtime_minutes} minutes
         </span>
-        <span className="inline-flex items-center gap-1 font-bold">
+        <span className="inline-flex items-center gap-1">
           <Star className="size-3.5 fill-[#e0a400] text-[#e0a400]" /> {movie.rating.toFixed(1)}
         </span>
       </div>

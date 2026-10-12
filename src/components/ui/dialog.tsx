@@ -80,7 +80,9 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-display text-xl font-bold", className)}
+      // The display faces ship in a single weight, so no font-bold here: a
+      // synthesised bold would smear them.
+      className={cn("font-display text-xl", className)}
       {...props}
     />
   );

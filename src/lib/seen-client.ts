@@ -35,6 +35,21 @@ export async function markSeen(movieId: number): Promise<boolean> {
   return true;
 }
 
+// Returns just these pictures to the deck (e.g. this session's discard pile).
+export async function unmarkSeen(movieIds: number[]): Promise<boolean> {
+  if (!supabase || movieIds.length === 0) return false;
+  const { error } = await supabase
+    .from("seen_movies")
+    .delete()
+    .eq("session_id", getSessionId())
+    .in("movie_id", movieIds);
+  if (error) {
+    console.error("unmarkSeen failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
 export async function clearSeen(): Promise<boolean> {
   if (!supabase) return false;
   const { error } = await supabase.from("seen_movies").delete().eq("session_id", getSessionId());

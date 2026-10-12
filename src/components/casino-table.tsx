@@ -1,24 +1,33 @@
 import * as React from "react";
 
-import { GENRE_META } from "@/lib/genre-meta";
-import type { GenreSlug } from "@/lib/types";
 import { CardBack } from "@/components/card-back";
+import { HelpTip } from "@/components/help-tip";
 
-// A green-baize card table: polished wooden rail, gold piping, gold printing
-// on the felt (an inner racetrack line and a ring of the ten suits), the
-// house's card shoe at one end (Hit Me) and your own deck at the other (Deal).
+export function hitMeTip(disabled: boolean) {
+  return disabled
+    ? "Every picture in the house already sits in your deck. The dealer has nothing new to offer."
+    : "The dealer draws a fresh card from the house, a picture not yet in your Watch Deck. Should it please you, add it to your deck.";
+}
+
+// A green-baize card table: polished wooden rail, gold piping, two gold
+// racetrack lines printed on the felt. On wider screens it keeps one height,
+// sized for the tallest placard, so playing a card never resizes the page.
+// The house's card shoe sits at one end (Hit Me) and your own deck at the
+// other (Deal, with `fold` set beneath it).
 export function CasinoTable({
   children,
   deckCount,
   onDeal,
   houseDisabled,
   onHitMe,
+  fold,
 }: {
   children: React.ReactNode;
   deckCount: number;
   onDeal: () => void;
   houseDisabled: boolean;
   onHitMe: () => void;
+  fold?: React.ReactNode;
 }) {
   return (
     <section
@@ -32,7 +41,7 @@ export function CasinoTable({
       }}
     >
       <div
-        className="relative isolate flex min-h-[210px] flex-col items-center justify-center gap-5 rounded-[38px] border-2 border-gold/70 px-5 py-4 sm:flex-row sm:rounded-[140px] sm:px-28 sm:py-4"
+        className="relative isolate flex min-h-[210px] flex-col sm:h-[400px] items-center justify-center gap-5 rounded-[38px] border-2 border-gold/70 px-5 py-4 sm:flex-row sm:rounded-[140px] sm:px-48 sm:py-4"
         style={{
           backgroundColor: "var(--felt)",
           backgroundImage:
@@ -41,74 +50,41 @@ export function CasinoTable({
           boxShadow: "inset 0 0 40px rgb(0 0 0 / 0.55)",
         }}
       >
-        <FeltPrint />
+        <FeltLines />
         <HouseShoe disabled={houseDisabled} onHitMe={onHitMe} />
-        <HandDeck count={deckCount} onDeal={onDeal} />
+        <div className="absolute top-1/2 right-[88px] z-10 hidden -translate-y-1/2 flex-col items-center gap-2.5 sm:flex">
+          <HandDeck count={deckCount} onDeal={onDeal} />
+          {fold}
+        </div>
         {children}
       </div>
     </section>
   );
 }
 
-// Gold printing on the felt, behind everything else.
-function FeltPrint() {
-  const suits = Object.keys(GENRE_META) as GenreSlug[];
-  const radius = 112;
-
+// The racetrack lines printed in gold on the felt, behind everything else.
+function FeltLines() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
       <div className="absolute inset-3 rounded-[28px] border border-gold/35 sm:inset-4 sm:rounded-[124px]" />
       <div className="absolute inset-[22px] rounded-[20px] border border-dashed border-gold/20 sm:inset-[26px] sm:rounded-[114px]" />
-
-      <div className="absolute top-1/2 left-1/2 size-0 opacity-[0.22]">
-        <div
-          className="absolute rounded-full border border-gold"
-          style={{ width: radius * 2 + 52, height: radius * 2 + 52, left: -(radius + 26), top: -(radius + 26) }}
-        />
-        <div
-          className="absolute rounded-full border border-gold"
-          style={{ width: radius * 2 - 52, height: radius * 2 - 52, left: -(radius - 26), top: -(radius - 26) }}
-        />
-        {suits.map((slug, i) => {
-          const Icon = GENRE_META[slug].icon;
-          const angle = (i / suits.length) * Math.PI * 2 - Math.PI / 2;
-          return (
-            <Icon
-              key={slug}
-              className="absolute size-6 text-gold-light"
-              strokeWidth={1.75}
-              style={{
-                left: Math.cos(angle) * radius - 12,
-                top: Math.sin(angle) * radius - 12,
-              }}
-            />
-          );
-        })}
-        <p className="absolute -left-20 -top-4 w-40 text-center font-woodtype text-lg leading-none text-gold-light">
-          Reel
-          <br />
-          Roulette
-        </p>
-      </div>
     </div>
   );
 }
 
 // The house's card shoe: a wooden dealing box with cards slanting out of it.
-// Pressing it is Hit Me — a card from the house you haven't kept yet. A
-// printed notice explains as much on hover / focus.
+// Pressing it is Hit Me — a card from the house you haven't kept yet. The
+// "?" beside it explains as much, only when asked, so the notice never
+// covers the felt while you're dealing.
 function HouseShoe({ disabled, onHitMe }: { disabled: boolean; onHitMe: () => void }) {
-  const tipId = React.useId();
-
   return (
-    <div className="group absolute top-1/2 left-7 z-10 hidden -translate-y-1/2 sm:block">
+    <div className="absolute top-1/2 left-[88px] z-10 hidden -translate-y-1/2 sm:block">
       <button
         type="button"
         onClick={onHitMe}
         disabled={disabled}
         aria-label="Hit Me: deal a card from the house"
-        aria-describedby={tipId}
-        className="flex flex-col items-center gap-2 outline-none disabled:opacity-50"
+        className="group flex flex-col items-center gap-2 outline-none disabled:opacity-50"
       >
         <div className="relative h-[86px] w-[70px] transition-transform duration-200 group-hover:-translate-y-1 group-active:translate-y-0">
           {/* Cards slanting out of the shoe's mouth */}
@@ -133,17 +109,9 @@ function HouseShoe({ disabled, onHitMe }: { disabled: boolean; onHitMe: () => vo
           Hit Me
         </span>
       </button>
-      <div
-        id={tipId}
-        role="tooltip"
-        className="broadside pointer-events-none absolute top-1/2 left-full z-50 ml-4 w-56 -translate-y-1/2 px-3 py-2 text-left font-serif text-xs leading-snug opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100"
-      >
-        <span className="font-slab text-[9px] tracking-[0.2em] text-crimson uppercase">Hit Me</span>
-        <br />
-        {disabled
-          ? "Every picture in the house already sits in your deck. The dealer has nothing new to offer."
-          : "The dealer draws a fresh card from the house, a picture not yet in your Watch Deck. Should it please you, add it to your deck."}
-      </div>
+      <HelpTip title="Hit Me" side="top" align="start" className="absolute bottom-0 -right-6">
+        {hitMeTip(disabled)}
+      </HelpTip>
     </div>
   );
 }
@@ -156,7 +124,7 @@ function HandDeck({ count, onDeal }: { count: number; onDeal: () => void }) {
       onClick={onDeal}
       disabled={count === 0}
       aria-label="Deal a random card from your hand"
-      className="group absolute top-1/2 right-8 hidden -translate-y-1/2 flex-col items-center gap-2 disabled:opacity-50 sm:flex"
+      className="group flex flex-col items-center gap-2 disabled:opacity-50"
     >
       <div className="relative w-[62px] transition-transform duration-200 group-hover:-translate-y-1 group-active:translate-y-0">
         {/* A few cards peeking out underneath for depth */}

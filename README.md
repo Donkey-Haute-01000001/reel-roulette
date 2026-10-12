@@ -38,8 +38,8 @@ K = 8.5+, Q = 8.0+, J = 7.5+, 10 = 7.0+, 9 = 6.5+, 8 = 6.0+, down to 2 below 3.5
 ## Stack
 
 - [Next.js 16](https://nextjs.org) (App Router, TypeScript, Turbopack)
-- [Tailwind CSS v4](https://tailwindcss.com), with Google Fonts woodtype faces (Abril Fatface,
-  Rye, Holtwood One SC, Old Standard TT)
+- [Tailwind CSS v4](https://tailwindcss.com), with Google Fonts period faces (IM Fell English
+  and IM Fell English SC, with Rye woodtype for signage)
 - shadcn/ui-style components (Button, Badge, Select, Dialog, …) built on Radix UI primitives
 - [Supabase](https://supabase.com) (Postgres + `@supabase/supabase-js`) for the movie dataset,
   Watch Deck, discards, and the daily spin count

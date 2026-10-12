@@ -93,13 +93,15 @@
   --color-genre-fantasy: #6366f1;
   --color-genre-documentary: #94a3b8;
 
-  /* Broadside woodtype: fat face display, ornamental Tuscan, extended slab
-     caps, and a period serif for running text. */
-  --font-display: var(--font-fatface);
+  /* IM Fell old printing type for everything (its small caps for labels,
+     still called "slab"), with Rye's ornamental Tuscan woodtype kept for
+     signage: the name, the stamps, the machine's marquee. */
+  --font-display: var(--font-im-fell);
   --font-woodtype: var(--font-rye);
-  --font-slab: var(--font-holtwood);
-  --font-sans: var(--font-old-standard);
-  --font-serif: var(--font-old-standard);
+  --font-slab: var(--font-im-fell-sc);
+  --font-card: var(--font-im-fell);
+  --font-sans: var(--font-im-fell);
+  --font-serif: var(--font-im-fell);
 
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
@@ -150,6 +152,12 @@
 }
 
 @layer utilities {
+  /* IM Fell's capitals stand about a tenth shorter than the heavy slab these
+     labels were sized for; scale them up to match. */
+  .font-slab {
+    font-size-adjust: cap-height 0.75;
+  }
+
   .text-balance {
     text-wrap: balance;
   }

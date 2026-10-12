@@ -61,3 +61,14 @@ export async function removeFromWatchlist(movieId: number): Promise<boolean> {
   }
   return true;
 }
+
+// Fold: the whole Watch Deck goes back to the house in one go.
+export async function clearWatchlist(): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase.from("watchlist").delete().eq("session_id", getSessionId());
+  if (error) {
+    console.error("clearWatchlist failed:", error.message);
+    return false;
+  }
+  return true;
+}

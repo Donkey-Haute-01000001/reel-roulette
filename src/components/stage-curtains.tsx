@@ -455,7 +455,7 @@ function Crest() {
         fontSize="13"
         letterSpacing="3"
         fill={gold}
-        style={{ fontFamily: "var(--font-holtwood)" }}
+        style={{ fontFamily: "var(--font-im-fell-sc)" }}
       >
         REEL ROULETTE
       </text>

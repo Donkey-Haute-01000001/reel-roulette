@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
-import { Abril_Fatface, Holtwood_One_SC, Old_Standard_TT, Rye } from "next/font/google";
+import { IM_Fell_English, IM_Fell_English_SC, Rye } from "next/font/google";
 import "./globals.css";
 
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { StageCurtains } from "@/components/stage-curtains";
+import { WelcomeDialog } from "@/components/welcome-dialog";
 
-// Victorian broadside woodtype set (see globals.css for how each is used).
-const fatface = Abril_Fatface({ variable: "--font-fatface", subsets: ["latin"], weight: "400" });
+// The type set (see globals.css for how each is used): Rye woodtype for signage.
 const rye = Rye({ variable: "--font-rye", subsets: ["latin"], weight: "400" });
-const holtwood = Holtwood_One_SC({ variable: "--font-holtwood", subsets: ["latin"], weight: "400" });
-const oldStandard = Old_Standard_TT({
-  variable: "--font-old-standard",
+// IM Fell: recut from 17th-century printing type, uneven ink and all. It's
+// the face for everything but the Rye woodtype signage, and has one weight:
+// keep font-bold off it, or the browser smears in a fake bold.
+const fell = IM_Fell_English({
+  variable: "--font-im-fell",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: "400",
   style: ["normal", "italic"],
 });
+const fellSc = IM_Fell_English_SC({ variable: "--font-im-fell-sc", subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
   title: {
@@ -30,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${fatface.variable} ${rye.variable} ${holtwood.variable} ${oldStandard.variable} h-full antialiased`}
+      className={`dark ${rye.variable} ${fell.variable} ${fellSc.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {/* The stage: the curtains hang from under the nav to the foot of the
@@ -45,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main className="isolate flex-1 pt-3">{children}</main>
           <SiteFooter />
         </div>
+        <WelcomeDialog />
       </body>
     </html>
   );

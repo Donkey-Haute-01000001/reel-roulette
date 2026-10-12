@@ -5,19 +5,37 @@ import { useRouter } from "next/navigation";
 
 import type { Genre, Movie, WatchlistEntry } from "@/lib/types";
 import { addToWatchlist, fetchWatchlist } from "@/lib/watchlist-client";
+import { fetchSeenIds, markSeen } from "@/lib/seen-client";
+import { fetchWatchedIds, toggleWatchedIn } from "@/lib/watched-client";
 import { GildedTitle } from "@/components/broadside";
 import { RouletteSlot } from "@/components/roulette-slot";
 
 export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: Genre[] }) {
   const router = useRouter();
   const [entries, setEntries] = React.useState<WatchlistEntry[]>([]);
+  // Discarded pictures (swiped left, or passed on here) stay out of
+  // catalogue spins until they're shuffled back in on the Swipe page.
+  const [seenIds, setSeenIds] = React.useState<Set<number>>(() => new Set());
+  const [watchedIds, setWatchedIds] = React.useState<Set<number>>(() => new Set());
 
   React.useEffect(() => {
     fetchWatchlist().then(setEntries);
+    fetchSeenIds().then(setSeenIds);
+    fetchWatchedIds().then(setWatchedIds);
   }, []);
 
   const deckMovies = React.useMemo(() => entries.map((e) => e.movies), [entries]);
   const savedIds = React.useMemo(() => new Set(deckMovies.map((m) => m.id)), [deckMovies]);
+  const spinCatalog = React.useMemo(
+    () => (seenIds.size > 0 ? catalog.filter((m) => !seenIds.has(m.id)) : catalog),
+    [catalog, seenIds]
+  );
+
+  const handlePass = (movie: Movie) => {
+    void markSeen(movie.id);
+    setSeenIds((prev) => new Set(prev).add(movie.id));
+  };
+  const toggleWatched = (movie: Movie) => setWatchedIds(toggleWatchedIn(watchedIds, movie.id));
 
   // Adding a spin result sends you straight to the Watch Deck with that card
   // already played to the table.
@@ -28,14 +46,17 @@ export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: 
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
       <GildedTitle className="mb-4" title="Spin" tagline="Three spins · one flick" />
       <RouletteSlot
         deckMovies={deckMovies}
-        catalog={catalog}
+        catalog={spinCatalog}
         genres={genres}
         savedIds={savedIds}
+        watchedIds={watchedIds}
         onSave={handleSave}
+        onPass={handlePass}
+        onToggleWatched={toggleWatched}
       />
     </div>
   );
