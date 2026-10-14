@@ -21,7 +21,7 @@ import { CasinoTable, hitMeTip } from "@/components/casino-table";
 import { HelpTip } from "@/components/help-tip";
 import { MovieCard } from "@/components/movie-card";
 import { MovieDetails } from "@/components/movie-details";
-import { WatchDeckHand } from "@/components/watch-deck-hand";
+import { WatchDeckHand, useDeckScale } from "@/components/watch-deck-hand";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog, ShuffleAllDiscardsDialog } from "@/components/confirm-dialog";
@@ -46,6 +46,7 @@ export function WatchDeckScreen({
   catalog: Movie[];
   initialPlayId?: number | null;
 }) {
+  const deckScale = useDeckScale();
   const [entries, setEntries] = React.useState<WatchlistEntry[] | null>(null);
   const [table, setTable] = React.useState<{ movie: Movie; from: Source } | null>(null);
   // A card asked for by the URL (e.g. after adding a Spin result), played
@@ -146,7 +147,10 @@ export function WatchDeckScreen({
     // screen's edge. Clipped top-to-bottom (overflow-y: clip) so the cards
     // below the edge are truly cut off, not left as blank space to scroll
     // into. (This page has no footer for the same reason.)
-    <div className="mx-auto flex min-h-[calc(100dvh-53px)] max-w-5xl flex-col overflow-y-clip px-4 pt-3 sm:px-6">
+    <div
+      className="mx-auto flex min-h-[calc(100dvh-53px)] max-w-5xl flex-col overflow-y-clip px-4 pt-3 sm:px-6"
+      style={{ "--deck-scale": deckScale } as React.CSSProperties}
+    >
       <GildedTitle className="mb-3" title="Watch Deck" tagline="Your hand awaits." />
 
       {!isSupabaseConfigured && (
@@ -197,7 +201,7 @@ export function WatchDeckScreen({
                 <>
                   <motion.div
                     key={`${onTable.movie.id}-${dealKey}`}
-                    className="w-[116px] shrink-0 [perspective:900px] sm:w-[124px]"
+                    className="w-[116px] shrink-0 [perspective:900px] sm:w-[calc(124px*var(--deck-scale,1))]"
                     initial={{ ...DEAL_FROM[from], opacity: 0 }}
                     animate={{ x: 0, y: 0, scale: 1, rotate: -3, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 240, damping: 24 }}
@@ -298,6 +302,7 @@ export function WatchDeckScreen({
                 movies={hand}
                 watchedIds={watchedIds}
                 tucked
+                scale={deckScale}
                 onPlay={(movie) => play(movie, "hand")}
               />
             ) : (

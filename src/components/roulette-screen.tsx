@@ -46,18 +46,22 @@ export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: 
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-3 sm:px-6">
       <GildedTitle className="mb-4" title="Spin" tagline="Three spins · one flick" />
-      <RouletteSlot
-        deckMovies={deckMovies}
-        catalog={spinCatalog}
-        genres={genres}
-        savedIds={savedIds}
-        watchedIds={watchedIds}
-        onSave={handleSave}
-        onPass={handlePass}
-        onToggleWatched={toggleWatched}
-      />
+      {/* Spare height on a tall screen goes above and below the machine,
+          not all of it under it. */}
+      <div className="flex flex-1 flex-col justify-center">
+        <RouletteSlot
+          deckMovies={deckMovies}
+          catalog={spinCatalog}
+          genres={genres}
+          savedIds={savedIds}
+          watchedIds={watchedIds}
+          onSave={handleSave}
+          onPass={handlePass}
+          onToggleWatched={toggleWatched}
+        />
+      </div>
     </div>
   );
 }

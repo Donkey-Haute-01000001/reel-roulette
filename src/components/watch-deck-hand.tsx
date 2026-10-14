@@ -8,7 +8,8 @@ import { MovieCard } from "@/components/movie-card";
 
 // Cards are 116px wide in a small hand and shrink (down to 96px) from the
 // 9th card to the 12th, then hold that size so they stay readable. Past
-// that, a bigger hand only overlaps more to fit.
+// that, a bigger hand only overlaps more to fit. On a tall screen all of
+// these grow by the deck scale (see useDeckScale).
 const MAX_CARD_W = 116;
 const MIN_CARD_W = 96;
 const SHRINK_FROM = 8;
@@ -32,11 +33,13 @@ export function WatchDeckHand({
   movies,
   watchedIds,
   tucked = false,
+  scale = 1,
   onPlay,
 }: {
   movies: Movie[];
   watchedIds?: Set<number>;
   tucked?: boolean;
+  scale?: number;
   onPlay: (movie: Movie) => void;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -65,7 +68,7 @@ export function WatchDeckHand({
   const n = movies.length;
   const shrinkSteps = Math.min(SHRINK_UNTIL - SHRINK_FROM, Math.max(0, n - SHRINK_FROM));
   const CARD_W = Math.round(
-    MAX_CARD_W - (shrinkSteps * (MAX_CARD_W - MIN_CARD_W)) / (SHRINK_UNTIL - SHRINK_FROM)
+    (MAX_CARD_W - (shrinkSteps * (MAX_CARD_W - MIN_CARD_W)) / (SHRINK_UNTIL - SHRINK_FROM)) * scale
   );
   const CARD_H = CARD_W * 1.4;
   const tilt = Math.min(5, 36 / Math.max(n, 1));
@@ -82,7 +85,7 @@ export function WatchDeckHand({
   // outer cards included, every corner — always fits inside the hand.
   const spread =
     n > 1
-      ? Math.max(8, Math.min(MAX_SPREAD, ((width || 800) / 2 - 6 - reach(edgeTilt)) / half))
+      ? Math.max(8, Math.min(MAX_SPREAD * scale, ((width || 800) / 2 - 6 - reach(edgeTilt)) / half))
       : 0;
   // Enough to uncover the neighbours of the enlarged card.
   const push = Math.max(18, (CARD_W * HOVER_SCALE) / 2 + 8 - spread);
@@ -256,4 +259,25 @@ export function WatchDeckHand({
       })}
     </div>
   );
+}
+
+// How much bigger the Watch Deck (table, its card, and the hand) is drawn on
+// a tall screen, so spare height fills with bigger cards rather than a gap
+// above the hand. 1 up to 800px of window height, growing with it after
+// that, and capped at 1.3 so a very tall display doesn't get giant cards.
+const BASE_HEIGHT = 800;
+const MAX_DECK_SCALE = 1.3;
+
+function subscribeResize(onChange: () => void) {
+  window.addEventListener("resize", onChange);
+  return () => window.removeEventListener("resize", onChange);
+}
+
+function currentDeckScale() {
+  const s = window.innerHeight / BASE_HEIGHT;
+  return Math.round(Math.min(MAX_DECK_SCALE, Math.max(1, s)) * 100) / 100;
+}
+
+export function useDeckScale() {
+  return React.useSyncExternalStore(subscribeResize, currentDeckScale, () => 1);
 }
