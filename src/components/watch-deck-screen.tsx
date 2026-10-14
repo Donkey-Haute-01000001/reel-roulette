@@ -53,7 +53,8 @@ const CARD_EXIT: Variants = {
   exit: (kind: ExitKind) => {
     switch (kind) {
       case "burn":
-        return { opacity: 0, scale: 0.94, transition: { delay: 0.45, duration: 0.45 } };
+        // The face and its flames do the work; this just waits for them.
+        return {};
       case "discard":
         return { y: 280, rotate: 10, opacity: 0, transition: { delay: 0.2, duration: 0.4, ease: "easeIn" } };
       case "hand":
@@ -68,34 +69,90 @@ const FLIP_EXIT: Variants = {
   exit: (kind: ExitKind) => (kind === "discard" ? { rotateY: 180, transition: { duration: 0.3 } } : {}),
 };
 
-// The card face chars to near-black as it burns.
+// Strike from Deck burns the card: a burn line climbs from the bottom edge
+// to the top, eating it away, with a glowing, charred band just above it
+// and flame flakes and smoke thrown off as it goes. About a second in all.
+//
+// The face is clipped from below. The clip box reaches 30% past the card on
+// every side (so the card's shadow isn't cut off), so the burn line travels
+// from 130% (below the card) to -30% (above it), measured from the top.
+const BURN_START = 0.08;
+const BURN_SWEEP = 0.85; // bottom of the clip box to the top
+const burnLineAt = (top: number) => BURN_START + ((130 - top) / 160) * BURN_SWEEP;
+
 const CHAR_EXIT: Variants = {
-  exit: (kind: ExitKind) =>
-    kind === "burn" ? { filter: "sepia(1) brightness(0.2)", transition: { duration: 0.5 } } : {},
-};
-
-// Embers that drift up off a burning card: where each starts (% of the
-// card), how far it drifts (px), and when it catches.
-const EMBERS = [
-  { left: 18, top: 72, dx: -16, dy: -90, delay: 0.05 },
-  { left: 42, top: 85, dx: 6, dy: -120, delay: 0.15 },
-  { left: 70, top: 76, dx: 18, dy: -100, delay: 0.1 },
-  { left: 30, top: 50, dx: -10, dy: -110, delay: 0.25 },
-  { left: 60, top: 45, dx: 12, dy: -95, delay: 0.3 },
-  { left: 82, top: 60, dx: 22, dy: -80, delay: 0.2 },
-  { left: 50, top: 25, dx: -4, dy: -85, delay: 0.4 },
-  { left: 12, top: 35, dx: -20, dy: -70, delay: 0.35 },
-];
-
-const emberExit = (dx: number, dy: number, delay: number): Variants => ({
   exit: (kind: ExitKind) =>
     kind === "burn"
       ? {
-          opacity: [0, 1, 0],
-          x: dx,
-          y: dy,
-          scale: [1, 1, 0.4],
-          transition: { duration: 0.9, delay, ease: "easeOut" },
+          clipPath: "inset(-30% -30% 130% -30%)",
+          transition: { delay: BURN_START, duration: BURN_SWEEP, ease: "linear" },
+        }
+      : {},
+};
+
+// The scorched band riding the burn line: its bottom edge sits on the line
+// (so it climbs from 100% to -60%, 30% tall), glowing where the card is
+// burning and fading through char into the untouched card above.
+const SCORCH_EXIT: Variants = {
+  exit: (kind: ExitKind) =>
+    kind === "burn"
+      ? { top: "-60%", transition: { delay: BURN_START, duration: BURN_SWEEP, ease: "linear" } }
+      : {},
+};
+
+// Flame flakes thrown off the burn line: where each starts (% of the card),
+// how far it flies (px), its spin, and its colour (white-hot, yellow, orange).
+// Each catches as the burn line reaches its height.
+const FLAKE_COLORS = ["#fff4d6", "#ffd23f", "#ff9a1f"];
+const FLAKES = [
+  { left: 12, top: 94, dx: -26, dy: -40, spin: -60, c: 0 },
+  { left: 40, top: 96, dx: -8, dy: -55, spin: 40, c: 1 },
+  { left: 68, top: 92, dx: 20, dy: -45, spin: 80, c: 2 },
+  { left: 86, top: 86, dx: 30, dy: -35, spin: -40, c: 0 },
+  { left: 24, top: 76, dx: -30, dy: -50, spin: 70, c: 2 },
+  { left: 56, top: 72, dx: 10, dy: -60, spin: -80, c: 0 },
+  { left: 80, top: 64, dx: 26, dy: -50, spin: 50, c: 1 },
+  { left: 8, top: 58, dx: -28, dy: -40, spin: -50, c: 1 },
+  { left: 38, top: 52, dx: -14, dy: -65, spin: 90, c: 2 },
+  { left: 66, top: 40, dx: 18, dy: -55, spin: -70, c: 0 },
+  { left: 18, top: 32, dx: -24, dy: -50, spin: 60, c: 2 },
+  { left: 50, top: 22, dx: 4, dy: -60, spin: -40, c: 1 },
+  { left: 84, top: 16, dx: 24, dy: -45, spin: 80, c: 2 },
+  { left: 30, top: 8, dx: -16, dy: -50, spin: -60, c: 0 },
+];
+
+const flakeExit = (f: (typeof FLAKES)[number]): Variants => ({
+  exit: (kind: ExitKind) =>
+    kind === "burn"
+      ? {
+          opacity: [0, 1, 1, 0],
+          scale: [0.5, 1.25, 0.9, 0.3],
+          x: f.dx,
+          y: f.dy,
+          rotate: f.spin,
+          backgroundColor: [FLAKE_COLORS[f.c], "#ffb020", "#ff6a00"],
+          transition: { duration: 0.6, delay: burnLineAt(f.top), ease: "easeOut" },
+        }
+      : {},
+});
+
+// Soft puffs of smoke left behind by the burn line.
+const SMOKE = [
+  { left: 30, top: 80, dx: -10, dy: -30 },
+  { left: 64, top: 62, dx: 12, dy: -35 },
+  { left: 22, top: 40, dx: -12, dy: -30 },
+  { left: 58, top: 18, dx: 8, dy: -35 },
+];
+
+const smokeExit = (p: (typeof SMOKE)[number]): Variants => ({
+  exit: (kind: ExitKind) =>
+    kind === "burn"
+      ? {
+          opacity: [0, 0.55, 0],
+          scale: [0.6, 1.6],
+          x: p.dx,
+          y: p.dy,
+          transition: { duration: 0.8, delay: burnLineAt(p.top), ease: "easeOut" },
         }
       : {},
 });
@@ -304,8 +361,8 @@ export function WatchDeckScreen({
                         exit="exit"
                       >
                         <motion.div
-                          className="[backface-visibility:hidden]"
-                          animate={{ filter: "sepia(0) brightness(1)" }}
+                          className="relative [backface-visibility:hidden]"
+                          animate={{ clipPath: "inset(-30% -30% -30% -30%)" }}
                           variants={CHAR_EXIT}
                           exit="exit"
                         >
@@ -314,21 +371,53 @@ export function WatchDeckScreen({
                             watched={tableWatched}
                             className="shadow-[0_14px_30px_rgb(0_0_0/0.55)]"
                           />
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 overflow-hidden rounded-[7%/5%]"
+                          >
+                            <motion.span
+                              className="absolute inset-x-0 h-[30%]"
+                              style={{
+                                backgroundImage:
+                                  "linear-gradient(to top, #ffe08a 0%, #ff8a1f 5%, #8a2e08 14%, rgb(30 14 6 / 0.9) 30%, rgb(30 14 6 / 0.45) 60%, transparent 100%)",
+                              }}
+                              initial={{ top: "100%" }}
+                              animate={{ top: "100%" }}
+                              variants={SCORCH_EXIT}
+                              exit="exit"
+                            />
+                          </span>
                         </motion.div>
                         {/* The back: shown while dealt face-down, and when discarded. */}
                         <div className="absolute inset-0 [transform:rotateY(180deg)] [backface-visibility:hidden]">
                           <CardBack className="shadow-[0_14px_30px_rgb(0_0_0/0.55)]" />
                         </div>
                       </motion.div>
-                      {EMBERS.map((e, i) => (
+                      {SMOKE.map((p, i) => (
                         <motion.span
-                          key={i}
+                          key={`smoke-${i}`}
                           aria-hidden
-                          className="pointer-events-none absolute size-1.5 rounded-full bg-[#ffb347] shadow-[0_0_6px_2px_rgb(255_120_40/0.7)]"
-                          style={{ left: `${e.left}%`, top: `${e.top}%` }}
+                          className="pointer-events-none absolute aspect-square w-[34%] rounded-full bg-[#3b2a1e]/60 blur-md"
+                          style={{ left: `${p.left - 17}%`, top: `${p.top - 12}%` }}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 0 }}
-                          variants={emberExit(e.dx, e.dy, e.delay)}
+                          variants={smokeExit(p)}
+                          exit="exit"
+                        />
+                      ))}
+                      {FLAKES.map((f, i) => (
+                        <motion.span
+                          key={`flake-${i}`}
+                          aria-hidden
+                          className="pointer-events-none absolute aspect-[5/3] w-[12%] rounded-[0_100%_0_100%] shadow-[0_0_8px_rgb(255_160_40/0.8)]"
+                          style={{
+                            left: `${f.left - 6}%`,
+                            top: `${f.top - 4}%`,
+                            backgroundColor: FLAKE_COLORS[f.c],
+                          }}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 0 }}
+                          variants={flakeExit(f)}
                           exit="exit"
                         />
                       ))}
