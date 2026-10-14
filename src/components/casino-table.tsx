@@ -124,7 +124,7 @@ function HandDeck({ count, onDeal }: { count: number; onDeal: () => void }) {
       onClick={onDeal}
       disabled={count === 0}
       aria-label="Deal a random card from your hand"
-      className="group flex flex-col items-center gap-2 disabled:opacity-50"
+      className="group flex flex-col items-center gap-3.5 disabled:opacity-50"
     >
       <div className="relative w-[62px] transition-transform duration-200 group-hover:-translate-y-1 group-active:translate-y-0">
         {/* A few cards peeking out underneath for depth */}
@@ -132,7 +132,7 @@ function HandDeck({ count, onDeal }: { count: number; onDeal: () => void }) {
         <div className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-[4px] bg-[#efe6d2]" />
         <CardBack className="shadow-[0_2px_4px_rgb(0_0_0/0.35)]" />
       </div>
-      <span className="font-slab text-[8px] tracking-[0.2em] text-gold-light uppercase group-hover:text-paper">
+      <span className="font-slab text-[10px] tracking-[0.2em] text-gold-light uppercase group-hover:text-paper">
         Deal · {count}
       </span>
     </button>

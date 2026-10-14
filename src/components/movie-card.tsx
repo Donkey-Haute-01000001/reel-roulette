@@ -111,18 +111,18 @@ export const MovieCard = React.memo(function MovieCard({
             <p
               className={cn(
                 "mt-[1.5cqw] inline-flex items-center font-serif whitespace-nowrap text-[#5c564a]",
-                compact ? "gap-[2.5cqw] text-[7.5cqw]" : "gap-[3cqw] text-[4.8cqw]"
+                compact ? "gap-[4cqw] text-[max(8.5px,7.5cqw)]" : "gap-[3.5cqw] text-[5.6cqw]"
               )}
             >
               <span className="inline-flex items-center gap-[1cqw]">
-                <Clock className={compact ? "size-[6.5cqw]" : "size-[4.4cqw]"} />
+                <Clock className={compact ? "size-[max(7.5px,6.5cqw)]" : "size-[5cqw]"} />
                 {movie.runtime_minutes} min
               </span>
               <span className="inline-flex items-center gap-[1cqw]">
                 <Star
                   className={cn(
                     "fill-[#e0a400] text-[#e0a400]",
-                    compact ? "size-[6.5cqw]" : "size-[4.4cqw]"
+                    compact ? "size-[max(7.5px,6.5cqw)]" : "size-[5cqw]"
                   )}
                 />
                 {movie.rating.toFixed(1)}
