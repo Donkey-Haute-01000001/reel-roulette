@@ -44,8 +44,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <StageCurtains />
           {/* `isolate` gives the page its own stacking context, so no z-index
               inside it (e.g. the hovered card in the Watch Deck hand) can
-              rise above the curtains. */}
-          <main className="isolate flex-1 pt-3">{children}</main>
+              rise above the curtains. A flex column, so a page can grow to
+              fill the screen (Swipe centres its card in the spare height);
+              pages stay full width, as before. */}
+          <main className="isolate flex flex-1 flex-col pt-3 *:w-full">{children}</main>
           <SiteFooter />
         </div>
         <WelcomeDialog />

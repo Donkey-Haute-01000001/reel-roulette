@@ -138,7 +138,7 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
     ) : null;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-3 sm:px-6">
       {/* Right means "I'd watch this"; left is for pictures you don't fancy.
           Signposts match the piles. */}
       <GildedTitle
@@ -149,7 +149,7 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
         right={["Keep ·", "want to watch"]}
       />
 
-      <div className="mb-3">
+      <div className="mb-6">
         <FilterBar genres={genres} value={filters} onChange={changeFilters}>
           <Button variant="secondary" size="sm" onClick={reshuffle} className="h-7 gap-1.5">
             <Shuffle className="size-3.5" /> Reshuffle
@@ -157,25 +157,30 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
         </FilterBar>
       </div>
 
-      <SwipeDeck
-        key={resetKey}
-        movies={dealable}
-        loading={loading}
-        emptyTitle={matching.length > 0 ? "All Spoken For" : "No Pictures Match"}
-        emptyBody={
-          matching.length > 0
-            ? "Every picture that matches is already kept in your Watch Deck or in the discard pile."
-            : "Pray widen your genre or mood selections."
-        }
-        emptyAction={shuffleAllButton}
-        onSave={handleSave}
-        onSeen={handleSeen}
-        piles={piles}
-        onLand={handleLand}
-        onShuffleBack={shuffleSessionBack}
-        watchedIds={watchedIds}
-        onToggleWatched={toggleWatched}
-      />
+      {/* Once the card has grown as tall as it goes, a taller screen's spare
+          height is shared above and below it, rather than all piling up
+          under the buttons. */}
+      <div className="flex flex-1 flex-col justify-center">
+        <SwipeDeck
+          key={resetKey}
+          movies={dealable}
+          loading={loading}
+          emptyTitle={matching.length > 0 ? "All Spoken For" : "No Pictures Match"}
+          emptyBody={
+            matching.length > 0
+              ? "Every picture that matches is already kept in your Watch Deck or in the discard pile."
+              : "Pray widen your genre or mood selections."
+          }
+          emptyAction={shuffleAllButton}
+          onSave={handleSave}
+          onSeen={handleSeen}
+          piles={piles}
+          onLand={handleLand}
+          onShuffleBack={shuffleSessionBack}
+          watchedIds={watchedIds}
+          onToggleWatched={toggleWatched}
+        />
+      </div>
 
       <ShuffleAllDiscardsDialog
         open={confirmAllOpen}

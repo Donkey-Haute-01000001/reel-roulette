@@ -22,6 +22,7 @@ import {
   Lever,
   type FloatingCoinsHandle,
   type SlotHint,
+  useSlotScale,
 } from "@/components/slot-parts";
 import { HelpTip } from "@/components/help-tip";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -41,8 +42,8 @@ const BULBS = 14;
 // last three tiles are what's visible once it lands (above / payline /
 // below). That makes the next spin seamless — it starts from those same
 // three tiles at y = 0.
-function stopOffset(strip: Movie[]) {
-  return -(strip.length - 3) * TILE_H;
+function stopOffset(strip: Movie[], tileH: number) {
+  return -(strip.length - 3) * tileH;
 }
 
 function buildStrip(pool: Movie[], target: Movie, startTiles: Movie[], fillers: number) {
@@ -105,10 +106,20 @@ export function RouletteSlot({
   // The result placard pops up over the page when the reels land; it can be
   // closed and reopened from the line under the machine.
   const [resultOpen, setResultOpen] = React.useState(false);
+  // The machine is drawn bigger on large monitors (see useSlotScale).
+  const scale = useSlotScale();
+  const tileH = TILE_H * scale;
 
   React.useEffect(() => {
     getSpinsRemaining().then(setSpinsLeft);
   }, []);
+
+  // If the scale changes between spins (the window is resized), set the
+  // landed reels back on their payline at the new tile height.
+  React.useEffect(() => {
+    if (spinning || !strips) return;
+    [y0, y1, y2].forEach((y, r) => y.set(stopOffset(strips[r], tileH)));
+  }, [tileH, spinning, strips, y0, y1, y2]);
 
   // Deal out today's coins once the spin count is known. (State adjusted
   // during render, per React's guidance, rather than in an effect.)
@@ -183,7 +194,7 @@ export function RouletteSlot({
       reelYs.map(
         (y, r) =>
           new Promise<void>((resolve) => {
-            animate(y, stopOffset(next[r]), {
+            animate(y, stopOffset(next[r], tileH), {
               duration: REEL_DURATIONS[r],
               ease: REEL_EASE,
               onComplete: () => {
@@ -302,8 +313,12 @@ export function RouletteSlot({
         </section>
 
         {/* The machine, dead centre. The lever hangs off its right edge; on
-            phones the side padding makes room for it. */}
-        <div className="order-3 mx-auto w-full max-w-[340px] max-sm:px-10 lg:order-2 lg:w-[340px] lg:max-w-none">
+            phones the side padding makes room for it. Wider on large
+            monitors (scale is only above 1 at xl and up). */}
+        <div
+          className="order-3 mx-auto w-full max-w-[340px] max-sm:px-10 lg:order-2 lg:w-[340px] lg:max-w-none"
+          style={scale > 1 ? { width: 340 * scale } : undefined}
+        >
           <div className="relative">
             {/* Gold trim around the cabinet */}
             <div
@@ -334,6 +349,8 @@ export function RouletteSlot({
                         key={r}
                         strip={shownStrips?.[r] ?? null}
                         y={reelYs[r]}
+                        tileH={tileH}
+                        scale={scale}
                         moving={spinning && landed <= r}
                         won={landed > r && result !== null}
                       />
@@ -343,7 +360,7 @@ export function RouletteSlot({
                   <div
                     aria-hidden
                     className="pointer-events-none absolute inset-x-0"
-                    style={{ top: 6 + TILE_H * 1.5 - 1 }}
+                    style={{ top: 6 + tileH * 1.5 - 1 }}
                   >
                     <div
                       className={cn(
@@ -393,7 +410,7 @@ export function RouletteSlot({
               </div>
             </div>
 
-            <Lever theta={leverTheta} enabled={canSpin} onPull={spin} />
+            <Lever key={scale} theta={leverTheta} enabled={canSpin} onPull={spin} scale={scale} />
           </div>
         </div>
 
@@ -409,6 +426,7 @@ export function RouletteSlot({
             slotRef={slotRef}
             onInsert={insertCoin}
             onHint={setSlotHint}
+            scale={scale}
           />
           <p className="font-slab text-[9px] tracking-[0.2em] text-gold-light/80 uppercase">
             {spinsLeft === null
@@ -636,29 +654,39 @@ function PoolTicket({
 function Reel({
   strip,
   y,
+  tileH,
+  scale,
   moving,
   won,
 }: {
   strip: Movie[] | null;
   y: MotionValue<number>;
+  tileH: number;
+  scale: number;
   moving: boolean;
   won: boolean;
 }) {
   return (
-    <div className="card-stock relative overflow-hidden rounded-lg" style={{ height: TILE_H * 3 }}>
+    <div className="card-stock relative overflow-hidden rounded-lg" style={{ height: tileH * 3 }}>
       <motion.div
         style={{ y }}
         className={cn("transition-[filter] duration-200", moving && "blur-[1.5px]")}
       >
         {strip
           ? strip.map((movie, i) => (
-              <ReelSymbol key={i} movie={movie} won={won && i === strip.length - 2} />
+              <ReelSymbol
+                key={i}
+                movie={movie}
+                tileH={tileH}
+                scale={scale}
+                won={won && i === strip.length - 2}
+              />
             ))
           : [0, 1, 2].map((i) => (
               <div
                 key={i}
                 className="flex items-center justify-center border-b border-[#e0d0ad] text-[#c9bfa9]"
-                style={{ height: TILE_H }}
+                style={{ height: tileH }}
               >
                 <HelpCircle className="size-8" strokeWidth={1.5} />
               </div>
@@ -678,7 +706,17 @@ function Reel({
 }
 
 // One symbol on a reel: the movie's suit and title, in the card-stock style.
-function ReelSymbol({ movie, won }: { movie: Movie; won: boolean }) {
+function ReelSymbol({
+  movie,
+  tileH,
+  scale,
+  won,
+}: {
+  movie: Movie;
+  tileH: number;
+  scale: number;
+  won: boolean;
+}) {
   const meta = GENRE_META[movie.primary_genre];
   const Icon = meta.icon;
 
@@ -686,12 +724,19 @@ function ReelSymbol({ movie, won }: { movie: Movie; won: boolean }) {
     <div
       className="flex flex-col items-center justify-center gap-1.5 border-b border-[#e0d0ad] px-2 text-center transition-colors"
       style={{
-        height: TILE_H,
+        height: tileH,
         background: won ? `color-mix(in srgb, ${meta.color} 22%, transparent)` : undefined,
       }}
     >
-      <Icon className="size-6 shrink-0" style={{ color: meta.color }} strokeWidth={1.75} />
-      <p className="line-clamp-2 font-display text-[10px] leading-tight text-[#1c1b19] sm:text-[11px]">
+      <Icon
+        className="shrink-0"
+        style={{ color: meta.color, width: 24 * scale, height: 24 * scale }}
+        strokeWidth={1.75}
+      />
+      <p
+        className="line-clamp-2 font-display text-[10px] leading-tight text-[#1c1b19] sm:text-[11px]"
+        style={scale > 1 ? { fontSize: 11 * scale } : undefined}
+      >
         {movie.title}
       </p>
     </div>

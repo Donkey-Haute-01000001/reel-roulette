@@ -41,7 +41,7 @@ export function CasinoTable({
       }}
     >
       <div
-        className="relative isolate flex min-h-[210px] flex-col sm:h-[400px] items-center justify-center gap-5 rounded-[38px] border-2 border-gold/70 px-5 py-4 sm:flex-row sm:rounded-[140px] sm:px-48 sm:py-4"
+        className="relative isolate flex min-h-[210px] flex-col sm:h-[340px] items-center justify-center gap-5 rounded-[38px] border-2 border-gold/70 px-5 py-4 sm:flex-row sm:rounded-[140px] sm:px-48 sm:py-4"
         style={{
           backgroundColor: "var(--felt)",
           backgroundImage:

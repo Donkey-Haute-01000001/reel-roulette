@@ -6,11 +6,14 @@ import { motion, useMotionValue, useSpring } from "motion/react";
 import type { Movie } from "@/lib/types";
 import { MovieCard } from "@/components/movie-card";
 
-// Cards are 120px wide in a small hand and shrink (down to 88px) as the hand
-// grows, so a big hand still fits with room for the hovered card.
-const MAX_CARD_W = 98;
-const MIN_CARD_W = 78;
-const MAX_SPREAD = 84; // px between card centres when there's room
+// Cards are 116px wide in a small hand and shrink (down to 96px) from the
+// 9th card to the 12th, then hold that size so they stay readable. Past
+// that, a bigger hand only overlaps more to fit.
+const MAX_CARD_W = 116;
+const MIN_CARD_W = 96;
+const SHRINK_FROM = 8;
+const SHRINK_UNTIL = 12;
+const MAX_SPREAD = 96; // px between card centres when there's room
 const LIFT = 36; // how far the hovered card rises out of the hand
 const HOVER_SCALE = 1.45;
 const PLAY_THRESHOLD = 110; // drag a card this far up to play it
@@ -21,9 +24,10 @@ const SPRING = { type: "spring", stiffness: 420, damping: 32, mass: 0.7 } as con
 // and straightens while its neighbours slide out of the way. Click a card,
 // or drag it up out of the hand, to play it to the table.
 //
-// `tucked`: the resting hand sinks so only the top three fifths of each card peek
-// up from the bottom of the screen, making room for the table above (the
-// Watch Deck keeps it tucked). The hovered card still rises out in full.
+// `tucked`: the resting hand sinks a little below the foot of the screen,
+// making room for the table above (the Watch Deck keeps it tucked). Only the
+// bottom margin goes under: the title and rating stay in view. The hovered
+// card still rises out in full.
 export function WatchDeckHand({
   movies,
   watchedIds,
@@ -59,7 +63,10 @@ export function WatchDeckHand({
   }, []);
 
   const n = movies.length;
-  const CARD_W = Math.round(Math.max(MIN_CARD_W, MAX_CARD_W - Math.max(0, n - 8) * 2.5));
+  const shrinkSteps = Math.min(SHRINK_UNTIL - SHRINK_FROM, Math.max(0, n - SHRINK_FROM));
+  const CARD_W = Math.round(
+    MAX_CARD_W - (shrinkSteps * (MAX_CARD_W - MIN_CARD_W)) / (SHRINK_UNTIL - SHRINK_FROM)
+  );
   const CARD_H = CARD_W * 1.4;
   const tilt = Math.min(5, 36 / Math.max(n, 1));
   const half = (n - 1) / 2;
@@ -94,7 +101,7 @@ export function WatchDeckHand({
   const overhang = Math.round(CARD_H * 0.3);
   // How far a tucked hand sinks: the box shrinks by this much and the
   // resting cards drop by it, their lower part clipped off at the bottom.
-  const tuck = tucked ? Math.round(CARD_H * 0.38) : 0;
+  const tuck = tucked ? Math.round(CARD_H * 0.12) : 0;
   const height = CARD_H - overhang + baseline + 12 - tuck;
 
   const measure = () => {
@@ -239,6 +246,7 @@ export function WatchDeckHand({
                 <MovieCard
                   movie={movie}
                   watched={watchedIds?.has(movie.id)}
+                  compact
                   className={isActive ? "shadow-2xl shadow-black/60" : "shadow-lg shadow-black/40"}
                 />
               </motion.div>

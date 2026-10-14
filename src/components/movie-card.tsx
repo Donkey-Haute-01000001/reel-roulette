@@ -23,13 +23,19 @@ import { cn } from "@/lib/utils";
 // A card you've watched ("Seen It") has its top-right corner turned down,
 // the way you'd dog-ear a page. That corner of the card is bare margin (the
 // indices sit top-left and bottom-right), so the fold covers nothing.
+//
+// `compact`: the small cards in the Watch Deck hand. The two large pips
+// come out of the frame and the medallion shrinks, so the genre, title and
+// running time can be set larger (relative to the card) and still fit.
 export const MovieCard = React.memo(function MovieCard({
   movie,
   watched = false,
+  compact = false,
   className,
 }: {
   movie: Movie;
   watched?: boolean;
+  compact?: boolean;
   className?: string;
 }) {
   const meta = GENRE_META[movie.primary_genre];
@@ -60,41 +66,65 @@ export const MovieCard = React.memo(function MovieCard({
 
         {/* The printed frame, with the large pips in its corners */}
         <div className="absolute inset-x-[12.5cqw] inset-y-[5cqw] rounded-[1cqw] border-[max(1px,0.45cqw)] border-[#1c1b19]/75">
-          <meta.icon
-            aria-hidden
-            className="absolute top-[2.5cqw] right-[2.5cqw] size-[10cqw]"
-            style={{ color: pip }}
-            strokeWidth={2.25}
-          />
-          <meta.icon
-            aria-hidden
-            className="absolute bottom-[2.5cqw] left-[2.5cqw] size-[10cqw] rotate-180"
-            style={{ color: pip }}
-            strokeWidth={2.25}
-          />
+          {!compact && (
+            <>
+              <meta.icon
+                aria-hidden
+                className="absolute top-[2.5cqw] right-[2.5cqw] size-[10cqw]"
+                style={{ color: pip }}
+                strokeWidth={2.25}
+              />
+              <meta.icon
+                aria-hidden
+                className="absolute bottom-[2.5cqw] left-[2.5cqw] size-[10cqw] rotate-180"
+                style={{ color: pip }}
+                strokeWidth={2.25}
+              />
+            </>
+          )}
 
           <div className="flex h-full flex-col items-center px-[3cqw] pt-[4cqw] pb-[5cqw] text-center">
             <p
-              className="w-full truncate px-[11cqw] font-slab text-[4cqw] leading-[6cqw] tracking-[0.1em] uppercase"
+              className={cn(
+                "w-full truncate font-slab uppercase",
+                compact
+                  ? "text-[6cqw] leading-[9cqw] tracking-[0.04em]"
+                  : "px-[11cqw] text-[4cqw] leading-[6cqw] tracking-[0.1em]"
+              )}
               style={{ color: ink }}
             >
               {meta.label}
             </p>
 
             <div className="flex min-h-0 w-full flex-1 items-center justify-center py-[1cqw]">
-              <Medallion icon={meta.icon} color={meta.color} />
+              <Medallion icon={meta.icon} color={meta.color} compact={compact} />
             </div>
 
-            <p className="line-clamp-3 w-full px-[1cqw] font-card text-[6.8cqw] leading-[1.12] text-balance">
+            <p
+              className={cn(
+                "line-clamp-3 w-full px-[1cqw] font-card leading-[1.12] text-balance",
+                compact ? "text-[10cqw]" : "text-[6.8cqw]"
+              )}
+            >
               {movie.title}
             </p>
-            <p className="mt-[1.5cqw] inline-flex items-center gap-[3cqw] font-serif text-[4.8cqw] text-[#5c564a]">
+            <p
+              className={cn(
+                "mt-[1.5cqw] inline-flex items-center font-serif whitespace-nowrap text-[#5c564a]",
+                compact ? "gap-[2.5cqw] text-[7.5cqw]" : "gap-[3cqw] text-[4.8cqw]"
+              )}
+            >
               <span className="inline-flex items-center gap-[1cqw]">
-                <Clock className="size-[4.4cqw]" />
+                <Clock className={compact ? "size-[6.5cqw]" : "size-[4.4cqw]"} />
                 {movie.runtime_minutes} min
               </span>
               <span className="inline-flex items-center gap-[1cqw]">
-                <Star className="size-[4.4cqw] fill-[#e0a400] text-[#e0a400]" />
+                <Star
+                  className={cn(
+                    "fill-[#e0a400] text-[#e0a400]",
+                    compact ? "size-[6.5cqw]" : "size-[4.4cqw]"
+                  )}
+                />
                 {movie.rating.toFixed(1)}
               </span>
             </p>
@@ -176,11 +206,24 @@ function CornerIndex({
 const PETALS = Array.from({ length: 16 }, (_, i) => i * 22.5);
 const BEADS = Array.from({ length: 32 }, (_, i) => (i * Math.PI * 2) / 32);
 
-function Medallion({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
+function Medallion({
+  icon: Icon,
+  color,
+  compact = false,
+}: {
+  icon: LucideIcon;
+  color: string;
+  compact?: boolean;
+}) {
   const deep = `color-mix(in srgb, ${color} 60%, #000)`;
 
   return (
-    <div className="relative aspect-square h-full max-h-[46cqw] max-w-full">
+    <div
+      className={cn(
+        "relative aspect-square h-full max-w-full",
+        compact ? "max-h-[36cqw]" : "max-h-[46cqw]"
+      )}
+    >
       <svg aria-hidden viewBox="-50 -50 100 100" className="absolute inset-0 h-full w-full">
         {PETALS.map((angle, i) => (
           <ellipse

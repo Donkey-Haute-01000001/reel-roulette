@@ -8,7 +8,7 @@ export default async function HomePage() {
   const [movies, genres] = await Promise.all([getMovies(), getGenres()]);
 
   return (
-    <div>
+    <div className="flex flex-1 flex-col">
       {!isSupabaseConfigured && (
         <p className="mx-auto mt-6 max-w-xl rounded-xl border border-dashed border-border bg-card px-4 py-3 text-center text-sm text-muted-foreground">
           Connect a Supabase project and set <code>NEXT_PUBLIC_SUPABASE_URL</code> /{" "}

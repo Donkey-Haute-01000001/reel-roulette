@@ -19,6 +19,28 @@ export type SlotHint = "idle" | "near" | "over";
 // Pieces of the Spin machine you play with by hand: the gold coins (one per
 // spin left today), the coin slot they go into, and the pull lever.
 
+// How much bigger the machine is drawn on large monitors: a step up at xl
+// (1280px) and again at 2xl (1536px). Every fixed size in the machine (reel
+// tiles, lever, coins, tray) is multiplied by it, so it all grows together.
+const XL = "(min-width: 1280px)";
+const XXL = "(min-width: 1536px)";
+
+function subscribeScale(onChange: () => void) {
+  const queries = [XL, XXL].map((q) => window.matchMedia(q));
+  queries.forEach((q) => q.addEventListener("change", onChange));
+  return () => queries.forEach((q) => q.removeEventListener("change", onChange));
+}
+
+function currentScale() {
+  if (window.matchMedia(XXL).matches) return 1.24;
+  if (window.matchMedia(XL).matches) return 1.12;
+  return 1;
+}
+
+export function useSlotScale() {
+  return React.useSyncExternalStore(subscribeScale, currentScale, () => 1);
+}
+
 // ---------------------------------------------------------------------------
 // Coin
 // ---------------------------------------------------------------------------
@@ -26,11 +48,11 @@ export type SlotHint = "idle" | "near" | "over";
 // A game-style gold coin: ridged rim and an embossed emblem. Its spin is the
 // classic flat trick (it squashes to its edge and back now and then), which
 // stays smooth where a true 3D coin was costly to animate.
-export function Coin({ delay = 0 }: { delay?: number }) {
+export function Coin({ delay = 0, scale = 1 }: { delay?: number; scale?: number }) {
   return (
     <span
-      className="block size-11 animate-[coin-bob_2.4s_ease-in-out_infinite] will-change-transform"
-      style={{ animationDelay: `${delay}s` }}
+      className="block animate-[coin-bob_2.4s_ease-in-out_infinite] will-change-transform"
+      style={{ animationDelay: `${delay}s`, width: 44 * scale, height: 44 * scale }}
     >
       <span
         className="relative block size-full animate-[coin-spin_3.6s_ease-in-out_infinite] rounded-full will-change-transform"
@@ -47,7 +69,10 @@ export function Coin({ delay = 0 }: { delay?: number }) {
             boxShadow: "inset 0 0 0 1.5px #a7791c, inset 0 -2px 3px rgb(0 0 0 / 0.25)",
           }}
         >
-          <span className="font-woodtype text-base leading-none text-[#7a5512] [text-shadow:0_1px_0_#fff1bf]">
+          <span
+            className="font-woodtype leading-none text-[#7a5512] [text-shadow:0_1px_0_#fff1bf]"
+            style={{ fontSize: 16 * scale }}
+          >
             R
           </span>
         </span>
@@ -83,6 +108,7 @@ export function FloatingCoins({
   slotRef,
   onInsert,
   onHint,
+  scale = 1,
 }: {
   ref?: React.Ref<FloatingCoinsHandle>;
   coins: number[];
@@ -90,6 +116,7 @@ export function FloatingCoins({
   slotRef: React.RefObject<HTMLElement | null>;
   onInsert: (id: number) => void;
   onHint: (hint: SlotHint) => void;
+  scale?: number;
 }) {
   const coinRefs = React.useRef(new Map<number, FloatingCoinHandle>());
   const [inFlight, setInFlight] = React.useState<number | null>(null);
@@ -108,12 +135,20 @@ export function FloatingCoins({
 
   return (
     <div className="flex shrink-0 flex-col items-center gap-2">
-      <div className="relative h-32 w-44" role="group" aria-label="Your coins for tonight">
+      <div
+        className="relative"
+        style={{ width: 176 * scale, height: 128 * scale }}
+        role="group"
+        aria-label="Your coins for tonight"
+      >
         {/* The tray, seen at an angle: a brass rim around a velvet dish */}
         <div
           aria-hidden
-          className="absolute inset-x-1 bottom-2 h-16 rounded-[50%] p-[5px] shadow-[0_10px_18px_rgb(0_0_0/0.6)]"
-          style={{ background: "linear-gradient(180deg, #f6dc8c, #a7791c 55%, #6e4f12)" }}
+          className="absolute inset-x-1 bottom-2 rounded-[50%] p-[5px] shadow-[0_10px_18px_rgb(0_0_0/0.6)]"
+          style={{
+            height: 64 * scale,
+            background: "linear-gradient(180deg, #f6dc8c, #a7791c 55%, #6e4f12)",
+          }}
         >
           <div
             className="h-full w-full rounded-[50%] shadow-[inset_0_6px_12px_rgb(0_0_0/0.7)]"
@@ -137,6 +172,7 @@ export function FloatingCoins({
             }}
             id={id}
             at={COIN_SPOTS[id % COIN_SPOTS.length]}
+            scale={scale}
             enabled={enabled && (inFlight === null || inFlight === id)}
             slotRef={slotRef}
             onFlightStart={() => setInFlight(id)}
@@ -161,10 +197,12 @@ function FloatingCoin({
   onFlightStart,
   onInsert,
   onHint,
+  scale,
 }: {
   ref?: React.Ref<FloatingCoinHandle>;
   id: number;
   at: { x: number; y: number };
+  scale: number;
   enabled: boolean;
   slotRef: React.RefObject<HTMLElement | null>;
   onFlightStart: () => void;
@@ -227,10 +265,12 @@ function FloatingCoin({
       {!lifted && !flying && (
         <span
           aria-hidden
-          className="pointer-events-none absolute h-2.5 w-9 animate-[coin-shadow_2.4s_ease-in-out_infinite] rounded-[50%] bg-black/55 blur-[2px]"
+          className="pointer-events-none absolute animate-[coin-shadow_2.4s_ease-in-out_infinite] rounded-[50%] bg-black/55 blur-[2px]"
           style={{
-            left: `calc(50% + ${at.x}px - 18px)`,
-            top: `calc(100% - 44px + ${at.y * 0.35}px)`,
+            width: 36 * scale,
+            height: 10 * scale,
+            left: `calc(50% + ${(at.x - 18) * scale}px)`,
+            top: `calc(100% - ${8 + 36 * scale}px + ${at.y * 0.35 * scale}px)`,
             animationDelay: `${id * 0.55}s`,
           }}
         />
@@ -242,10 +282,19 @@ function FloatingCoin({
         title="Drop me in the slot"
         disabled={!enabled || flying}
         className={cn(
-          "absolute -mt-[22px] -ml-[22px] touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-gold-light",
+          "absolute touch-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-gold-light",
           enabled && !flying ? "cursor-grab active:cursor-grabbing" : "cursor-default opacity-60"
         )}
-        style={{ x, y, scaleX, opacity, left: `calc(50% + ${at.x}px)`, top: `calc(50% + ${at.y}px)` }}
+        style={{
+          x,
+          y,
+          scaleX,
+          opacity,
+          left: `calc(50% + ${at.x * scale}px)`,
+          top: `calc(50% + ${at.y * scale}px)`,
+          marginTop: -22 * scale,
+          marginLeft: -22 * scale,
+        }}
         drag={enabled && !flying}
         dragMomentum={false}
         dragElastic={0}
@@ -285,7 +334,7 @@ function FloatingCoin({
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 380, damping: 18 }}
         >
-          <Coin delay={id * 0.55} />
+          <Coin delay={id * 0.55} scale={scale} />
         </motion.span>
       </motion.button>
     </>
@@ -363,29 +412,34 @@ const PERSPECTIVE = 420;
 // hub, knob up at rest. Pulling swings the arm toward you and down until it
 // hangs below the pivot. `theta` is the swing in degrees (0 = up, 180 =
 // down); the parent animates it for a spin. Dragging the knob down sets it
-// directly, and only a pull all the way down counts.
+// directly, and only a pull all the way down counts. The parent remounts it
+// (keyed on `scale`) if the scale changes.
 export function Lever({
   theta,
   enabled,
   onPull,
+  scale = 1,
 }: {
   theta: MotionValue<number>;
   enabled: boolean;
   onPull: () => void;
+  scale?: number;
 }) {
+  const arm = ARM * scale;
+  const perspective = PERSPECTIVE * scale;
   // Project the swing: the knob's height on screen, and how much nearer
   // (larger) it looks as the arm swings out toward you.
   const nearness = useTransform(
     theta,
-    (t) => PERSPECTIVE / (PERSPECTIVE - ARM * Math.sin((t * Math.PI) / 180))
+    (t) => perspective / (perspective - arm * Math.sin((t * Math.PI) / 180))
   );
   const knobY = useTransform(theta, (t) => {
     const r = (t * Math.PI) / 180;
-    return -ARM * Math.cos(r) * (PERSPECTIVE / (PERSPECTIVE - ARM * Math.sin(r)));
+    return -arm * Math.cos(r) * (perspective / (perspective - arm * Math.sin(r)));
   });
   const armTop = useTransform(knobY, (ky) => Math.min(0, ky));
   const armHeight = useTransform(knobY, (ky) => Math.abs(ky));
-  const armWidth = useTransform(nearness, (s) => 7 * (1 + (s - 1) * 0.7));
+  const armWidth = useTransform(nearness, (s) => 7 * scale * (1 + (s - 1) * 0.7));
 
   const panFrom = React.useRef(0);
   const pannedRef = React.useRef(false);
@@ -407,7 +461,8 @@ export function Lever({
       {/* Pivot hub */}
       <span
         aria-hidden
-        className="absolute top-0 left-1/2 size-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#c99a2e] bg-[radial-gradient(circle_at_35%_30%,#ffffff,#b5b5bd_45%,#4a4a52)] shadow-md"
+        style={{ width: 28 * scale, height: 28 * scale }}
+        className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#c99a2e] bg-[radial-gradient(circle_at_35%_30%,#ffffff,#b5b5bd_45%,#4a4a52)] shadow-md"
       />
       {/* The knob: drag it down, or click it */}
       <motion.button
@@ -416,10 +471,17 @@ export function Lever({
         title={enabled ? "Pull the lever all the way down" : "Insert a coin first"}
         disabled={!enabled}
         className={cn(
-          "absolute top-0 left-1/2 -mt-[15px] -ml-[15px] size-[30px] touch-none rounded-full bg-[radial-gradient(circle_at_35%_30%,#ff9a9a,#e11d2e_55%,#6e0a12)] shadow-[0_4px_8px_rgb(0_0_0/0.55)] outline-none focus-visible:ring-2 focus-visible:ring-gold-light",
+          "absolute top-0 left-1/2 touch-none rounded-full bg-[radial-gradient(circle_at_35%_30%,#ff9a9a,#e11d2e_55%,#6e0a12)] shadow-[0_4px_8px_rgb(0_0_0/0.55)] outline-none focus-visible:ring-2 focus-visible:ring-gold-light",
           enabled ? "cursor-grab hover:brightness-110 active:cursor-grabbing" : "cursor-not-allowed saturate-50"
         )}
-        style={{ y: knobY, scale: nearness }}
+        style={{
+          y: knobY,
+          scale: nearness,
+          width: 30 * scale,
+          height: 30 * scale,
+          marginTop: -15 * scale,
+          marginLeft: -15 * scale,
+        }}
         onPointerDown={() => {
           pannedRef.current = false;
         }}
@@ -432,7 +494,7 @@ export function Lever({
         onPan={(_, info) => {
           if (!enabled) return;
           // The knob travels about twice the arm's length from top to bottom.
-          const t = panFrom.current + (info.offset.y / (ARM * 2)) * 180;
+          const t = panFrom.current + (info.offset.y / (arm * 2)) * 180;
           theta.set(Math.max(0, Math.min(180, t)));
         }}
         onPanEnd={() => {
