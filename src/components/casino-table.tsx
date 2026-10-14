@@ -5,7 +5,7 @@ import { HelpTip } from "@/components/help-tip";
 
 export function hitMeTip(disabled: boolean) {
   return disabled
-    ? "Every picture in the house already sits in your deck. The dealer has nothing new to offer."
+    ? "Every picture in the house already sits in your deck or upon the discard pile. The dealer has nothing new to offer."
     : "The dealer draws a fresh card from the house, a picture not yet in your Watch Deck. Should it please you, add it to your deck.";
 }
 
