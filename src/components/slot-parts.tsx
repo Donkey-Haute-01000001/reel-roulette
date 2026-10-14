@@ -20,18 +20,21 @@ export type SlotHint = "idle" | "near" | "over";
 // spin left today), the coin slot they go into, and the pull lever.
 
 // How much bigger the machine is drawn on large monitors: a step up at xl
-// (1280px) and again at 2xl (1536px). Every fixed size in the machine (reel
+// (1280px), again at 2xl (1536px), and once more on a big desktop monitor
+// that's also tall enough to hold it. Every fixed size in the machine (reel
 // tiles, lever, coins, tray) is multiplied by it, so it all grows together.
 const XL = "(min-width: 1280px)";
 const XXL = "(min-width: 1536px)";
+const SLOT_BIG = "(min-width: 1536px) and (min-height: 900px)";
 
 function subscribeScale(onChange: () => void) {
-  const queries = [XL, XXL].map((q) => window.matchMedia(q));
+  const queries = [XL, XXL, SLOT_BIG].map((q) => window.matchMedia(q));
   queries.forEach((q) => q.addEventListener("change", onChange));
   return () => queries.forEach((q) => q.removeEventListener("change", onChange));
 }
 
 function currentScale() {
+  if (window.matchMedia(SLOT_BIG).matches) return 1.4;
   if (window.matchMedia(XXL).matches) return 1.24;
   if (window.matchMedia(XL).matches) return 1.12;
   return 1;
