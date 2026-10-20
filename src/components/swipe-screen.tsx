@@ -152,11 +152,12 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
       />
 
       <div className="mb-6">
-        <FilterBar genres={genres} value={filters} onChange={changeFilters}>
+        <FilterBar genres={genres} value={filters} onChange={changeFilters} />
+        <div className="mt-3 flex justify-center">
           <Button variant="secondary" size="sm" onClick={reshuffle} className="h-7 gap-1.5">
             <Shuffle className="size-3.5" /> Reshuffle
           </Button>
-        </FilterBar>
+        </div>
       </div>
 
       {/* Once the card has grown as tall as it goes, a taller screen's spare

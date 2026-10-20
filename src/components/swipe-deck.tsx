@@ -38,9 +38,9 @@ function nextBag(pool: Movie[], excludeId: number | null): Movie[] {
 const SWIPE_THRESHOLD = 110;
 
 // Sized off the window height (leaving room for the nav, the ribbon banner,
-// filters and buttons, plus some breathing room — 375px in all) so the whole
+// filters and buttons, plus some breathing room — 400px in all) so the whole
 // swipe screen fits without scrolling, and grows on taller screens.
-const CARD_HEIGHT = "clamp(240px, calc(100dvh - 375px), 420px)";
+const CARD_HEIGHT = "clamp(240px, calc(100dvh - 400px), 420px)";
 // The Discard / Keep piles either side of the card, at 42% of its size.
 const PILE_SCALE = 0.42;
 const PILE_WIDTH = `calc(${CARD_HEIGHT} * ${(5 / 7) * PILE_SCALE})`;
