@@ -13,8 +13,8 @@ export function hasActiveFilters(f: FilterState): boolean {
   return f.genres.length > 0;
 }
 
-// Genres are OR'd: picking Action + Romance means "has either tag".
+// Genres are AND'd: picking Action + Romance means "has both tags".
 export function applyFilters(movies: Movie[], f: FilterState): Movie[] {
   if (f.genres.length === 0) return movies;
-  return movies.filter((m) => m.genre_slugs.some((g) => f.genres.includes(g)));
+  return movies.filter((m) => f.genres.every((g) => m.genre_slugs.includes(g)));
 }
