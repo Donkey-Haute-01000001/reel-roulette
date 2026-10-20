@@ -79,6 +79,8 @@ export function RouletteSlot({
 }) {
   const [source, setSource] = React.useState<Source>("deck");
   const [filters, setFilters] = React.useState(EMPTY_FILTERS);
+  // Leave pictures marked "Seen It" off the reels (Watch Deck pool only).
+  const [skipSeen, setSkipSeen] = React.useState(false);
   const [spinsLeft, setSpinsLeft] = React.useState<number | null>(null);
   const [spinning, setSpinning] = React.useState(false);
   const [strips, setStrips] = React.useState<Movie[][] | null>(null);
@@ -129,7 +131,12 @@ export function RouletteSlot({
 
   const pool = source === "deck" ? deckMovies : catalog;
   const poolLabel = source === "deck" ? "Your Watch Deck" : "The Whole Catalogue";
-  const filtered = React.useMemo(() => applyFilters(pool, filters), [pool, filters]);
+  // Spin's own step after the shared genre filter, so Swipe keeps dealing
+  // watched pictures regardless.
+  const filtered = React.useMemo(() => {
+    const matching = applyFilters(pool, filters);
+    return source === "deck" && skipSeen ? matching.filter((m) => !watchedIds.has(m.id)) : matching;
+  }, [pool, filters, source, skipSeen, watchedIds]);
 
   // Before the first spin the reels just preview the current pool
   // (deterministic, so it renders the same on server and client).
@@ -299,7 +306,29 @@ export function RouletteSlot({
               onChange={setFilters}
               disabled={spinning}
               tone="paper"
-            />
+            >
+              {source === "deck" && (
+                <span className="inline-flex items-center">
+                  <button
+                    type="button"
+                    disabled={spinning}
+                    onClick={() => setSkipSeen((on) => !on)}
+                    aria-pressed={skipSeen}
+                    className={cn(
+                      "flex h-7 items-center rounded-[3px] border px-2 font-slab text-[8px] tracking-[0.12em] uppercase transition-colors disabled:opacity-50",
+                      skipSeen
+                        ? "border-ink bg-crimson text-paper shadow-[inset_0_0_0_1px_rgb(0_0_0/0.25)]"
+                        : "border-ink/30 bg-paper-deep/40 text-ink/70 hover:border-ink/70 hover:text-ink"
+                    )}
+                  >
+                    Skip Pictures Seen
+                  </button>
+                  <HelpTip title="Seen It" tone="ink" align="end">
+                    Leaves out any picture you&apos;ve marked as “Seen It”.
+                  </HelpTip>
+                </span>
+              )}
+            </FilterBar>
           </div>
           <p className="mt-2 font-serif text-xs" aria-live="polite">
             The reels hold{" "}
@@ -528,8 +557,9 @@ export function RouletteSlot({
                   </div>
                 ) : (
                   // A pick you haven't kept yet: keep it, or pass on it, as
-                  // two equal halves.
-                  <div className="mx-auto mt-4 grid max-w-sm grid-cols-2 gap-2">
+                  // two equal halves (stacked on phones, where half is too
+                  // narrow for "Add to Watch Deck").
+                  <div className="mx-auto mt-4 grid max-w-sm grid-cols-1 gap-2 sm:grid-cols-2">
                     <Button onClick={handleSave} disabled={saving} className="gap-1.5">
                       <Bookmark className="size-4" /> {saving ? "Adding…" : "Add to Watch Deck"}
                     </Button>
