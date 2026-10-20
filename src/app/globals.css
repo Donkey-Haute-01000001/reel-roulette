@@ -92,6 +92,9 @@
   --color-genre-animation: #84cc16;
   --color-genre-fantasy: #6366f1;
   --color-genre-documentary: #94a3b8;
+  --color-genre-western: #a6a230;
+  --color-genre-musical: #ea3eea;
+  --color-genre-biography: #389444;
 
   /* IM Fell old printing type for everything (its small caps for labels,
      still called "slab"), with Rye's ornamental Tuscan woodtype kept for

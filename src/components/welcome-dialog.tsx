@@ -7,8 +7,9 @@ import { Ornament } from "@/components/broadside";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
-// Once per browser, like the session id in session.ts.
-const WELCOMED_KEY = "movie-roulette:welcomed";
+// Once per browser, like the session id in session.ts. Versioned so a fresh
+// catalogue (5.0) greets returning visitors again.
+const WELCOMED_KEY = "movie-roulette:welcomed-v5";
 // Fired by the "?" in the nav (see openWelcome) to bring the notice back.
 const OPEN_EVENT = "movie-roulette:open-welcome";
 

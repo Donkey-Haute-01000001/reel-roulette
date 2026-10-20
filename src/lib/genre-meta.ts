@@ -1,9 +1,12 @@
 import {
+  BookOpen,
   Camera,
   Drama,
+  Fence,
   Flame,
   Ghost,
   Heart,
+  Music2,
   Rocket,
   Smile,
   Sparkles,
@@ -28,6 +31,9 @@ export const GENRE_META: Record<
   animation: { label: "Animation", color: "var(--color-genre-animation)", icon: Sparkles },
   fantasy: { label: "Fantasy", color: "var(--color-genre-fantasy)", icon: Wand2 },
   documentary: { label: "Documentary", color: "var(--color-genre-documentary)", icon: Camera },
+  western: { label: "Western", color: "var(--color-genre-western)", icon: Fence },
+  musical: { label: "Musical", color: "var(--color-genre-musical)", icon: Music2 },
+  biography: { label: "Biography", color: "var(--color-genre-biography)", icon: BookOpen },
 };
 
 export const MOOD_TAGS = [

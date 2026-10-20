@@ -8,7 +8,10 @@ export type GenreSlug =
   | "thriller"
   | "animation"
   | "fantasy"
-  | "documentary";
+  | "documentary"
+  | "western"
+  | "musical"
+  | "biography";
 
 export type Genre = {
   slug: GenreSlug;
