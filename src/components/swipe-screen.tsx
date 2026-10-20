@@ -123,14 +123,16 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
   const seenCount = (seenIds?.size ?? 0) + playedSinceDeal.seen.length;
   const remaining = dealable.length - playedSinceDeal.saved.length - playedSinceDeal.seen.length;
 
-  // Only offered once there's nothing left to deal, and it asks first.
+  // Only offered once there's nothing left to deal, and it asks first. It
+  // sits on the paper empty-deck panel, so it's inked in the discard pile's
+  // red rather than the outline button's cream.
   const shuffleAllButton =
     seenCount > 0 ? (
       <Button
         variant="outline"
         size="sm"
         onClick={() => setConfirmAllOpen(true)}
-        className="h-7 gap-1.5"
+        className="h-7 gap-1.5 border-crimson/60 text-crimson hover:bg-crimson/10"
         title="Return every discarded picture to the deck"
       >
         <Undo2 className="size-3.5" /> Shuffle All Discards Back In
