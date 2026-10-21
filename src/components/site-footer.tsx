@@ -10,7 +10,7 @@ export function SiteFooter() {
   if (pathname === "/watchlist") return null;
 
   return (
-    <footer className="mt-3 pb-2">
+    <footer className="mt-3 pb-2 short:mt-1">
       <div className="mx-auto flex max-w-md flex-col items-center gap-1.5 px-4 text-center opacity-45 transition-opacity duration-700 hover:opacity-90">
         <span aria-hidden className="h-px w-10 bg-gold/60" />
         <p className="font-slab text-[9px] tracking-[0.5em] text-gold-light uppercase">

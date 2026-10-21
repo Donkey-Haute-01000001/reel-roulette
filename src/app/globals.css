@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Desktop layout on a short screen (e.g. a laptop): tighten so pages still fit. */
+@custom-variant short (@media (min-width: 1024px) and (max-height: 759px));
 
 /*
  * Victorian casino: emerald velvet curtains and gold trim around the page,

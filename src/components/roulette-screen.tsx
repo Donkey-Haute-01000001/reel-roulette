@@ -47,7 +47,7 @@ export function RouletteScreen({ catalog, genres }: { catalog: Movie[]; genres: 
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-1 pb-3 sm:px-6 [@media(min-width:1536px)_and_(min-height:900px)]:max-w-6xl">
-      <GildedTitle className="mb-2"title="Spin" tagline="Three spins · one flick" />
+      <GildedTitle className="mb-2 short:mb-1" title="Spin" tagline="Three spins · one flick" />
       {/* Spare height on a tall screen goes above and below the machine,
           not all of it under it. */}
       <div className="flex flex-1 flex-col justify-center">

@@ -267,7 +267,7 @@ export function RouletteSlot({
             The first of the three steps. */}
         <section
           aria-labelledby="wager-heading"
-          className="broadside order-1 w-full max-w-xl justify-self-center px-4 py-3 text-center lg:max-w-[240px] lg:justify-self-end"
+          className="broadside order-1 w-full max-w-xl justify-self-center px-4 py-3 text-center lg:max-w-[240px] lg:justify-self-end short:py-2"
         >
           <p
             id="wager-heading"
@@ -280,8 +280,8 @@ export function RouletteSlot({
               you how many pictures the reels hold.
             </HelpTip>
           </p>
-          <Ornament className="mb-2 text-ink" />
-          <div role="radiogroup" aria-label="Spin for" className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
+          <Ornament className="mb-2 text-ink short:mb-1" />
+          <div role="radiogroup" aria-label="Spin for" className="grid grid-cols-2 gap-2.5 lg:grid-cols-1 short:gap-1">
             <PoolTicket
               icon={Layers}
               title="Your Watch Deck"
@@ -299,7 +299,7 @@ export function RouletteSlot({
               onSelect={() => setSource("catalog")}
             />
           </div>
-          <div className="mt-3">
+          <div className="mt-3 short:mt-2">
             <FilterBar
               genres={genres}
               value={filters}
@@ -330,7 +330,7 @@ export function RouletteSlot({
               )}
             </FilterBar>
           </div>
-          <p className="mt-2 font-serif text-xs" aria-live="polite">
+          <p className="mt-2 font-serif text-xs short:mt-1" aria-live="polite">
             The reels hold{" "}
             <strong className="font-normal text-crimson">
               {filtered.length} {filtered.length === 1 ? "picture" : "pictures"}
@@ -656,7 +656,7 @@ function PoolTicket({
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "relative flex items-center gap-3 rounded-[4px] border-2 px-3 py-2.5 text-left transition-[transform,box-shadow,background-color,opacity] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-crimson disabled:cursor-not-allowed",
+        "relative flex items-center gap-3 rounded-[4px] border-2 px-3 py-2.5 text-left short:py-1 transition-[transform,box-shadow,background-color,opacity] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-crimson disabled:cursor-not-allowed",
         selected
           ? "-translate-y-0.5 border-double border-crimson bg-[#fff8e6] shadow-[0_6px_14px_rgb(0_0_0/0.25)]"
           : "border-ink/25 bg-transparent opacity-60 hover:opacity-90"
