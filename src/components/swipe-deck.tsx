@@ -286,6 +286,7 @@ export function SwipeDeck({
                 exitTarget={exitTarget}
                 onExitComplete={finishExit}
                 onSwipeStart={commitSwipe}
+                onOpenDetails={() => setDetailOpen(true)}
               />
             )}
           </AnimatePresence>
@@ -487,6 +488,7 @@ function SwipeCard({
   exitTarget,
   onExitComplete,
   onSwipeStart,
+  onOpenDetails,
 }: {
   movie: Movie;
   watched: boolean;
@@ -494,6 +496,7 @@ function SwipeCard({
   exitTarget: ExitTarget | null;
   onExitComplete: (movieId: number) => void;
   onSwipeStart: (direction: "left" | "right") => void;
+  onOpenDetails: () => void;
 }) {
   const x = useMotionValue(0);
   // Tilt follows the drag until the swipe is committed; from then on the
@@ -502,6 +505,9 @@ function SwipeCard({
   useMotionValueEvent(x, "change", (v) => {
     if (!exiting) rotate.set(Math.max(-18, Math.min(18, (v / 300) * 18)));
   });
+  // Set once the card starts moving, so letting go after a drag (swiped or
+  // not) isn't taken for a click.
+  const dragged = React.useRef(false);
   const saveOpacity = useTransform(x, [20, 120], [0, 1]);
   const skipOpacity = useTransform(x, [-120, -20], [1, 0]);
 
@@ -537,9 +543,19 @@ function SwipeCard({
       onAnimationComplete={() => {
         if (exiting) onExitComplete(movie.id);
       }}
+      onPointerDown={() => {
+        dragged.current = false;
+      }}
+      onDragStart={() => {
+        dragged.current = true;
+      }}
       onDragEnd={(_, info) => {
         if (info.offset.x > SWIPE_THRESHOLD) onSwipeStart("right");
         else if (info.offset.x < -SWIPE_THRESHOLD) onSwipeStart("left");
+      }}
+      // A plain click on the card opens the particulars.
+      onTap={() => {
+        if (!exiting && !dragged.current) onOpenDetails();
       }}
     >
       {/* The stamps fade as the card takes off for its pile */}
