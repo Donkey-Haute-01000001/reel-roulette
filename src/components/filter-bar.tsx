@@ -61,17 +61,21 @@ export function FilterBar({
         );
       })}
 
-      {hasActiveFilters(value) && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn("h-7 px-2", tone === "paper" && "text-crimson hover:bg-crimson/10")}
-          disabled={disabled}
-          onClick={() => onChange(EMPTY_FILTERS)}
-        >
-          Clear
-        </Button>
-      )}
+      {/* Always in the row (just hidden when idle) so picking a filter never
+          changes where the chips wrap. */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "h-7 px-2",
+          tone === "paper" && "text-crimson hover:bg-crimson/10",
+          !hasActiveFilters(value) && "invisible"
+        )}
+        disabled={disabled || !hasActiveFilters(value)}
+        onClick={() => onChange(EMPTY_FILTERS)}
+      >
+        Clear
+      </Button>
 
       {children}
     </div>
