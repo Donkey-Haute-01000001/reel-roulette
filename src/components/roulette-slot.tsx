@@ -9,7 +9,7 @@ import { Bookmark, Check, Dices, Eye, Film, HelpCircle, Layers, X, type LucideIc
 import type { Genre, Movie } from "@/lib/types";
 import { GENRE_META } from "@/lib/genre-meta";
 import { Ornament } from "@/components/broadside";
-import { EMPTY_FILTERS, applyFilters } from "@/lib/movie-filters";
+import { EMPTY_FILTERS, applyFilters, hasActiveFilters } from "@/lib/movie-filters";
 import { DAILY_SPINS, getSpinsRemaining, recordSpin } from "@/lib/roulette-client";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { FilterBar } from "@/components/filter-bar";
@@ -130,7 +130,6 @@ export function RouletteSlot({
   }
 
   const pool = source === "deck" ? deckMovies : catalog;
-  const poolLabel = source === "deck" ? "Your Watch Deck" : "The Whole Catalogue";
   // Spin's own step after the shared genre filter, so Swipe keeps dealing
   // watched pictures regardless.
   const filtered = React.useMemo(() => {
@@ -306,6 +305,7 @@ export function RouletteSlot({
               onChange={setFilters}
               disabled={spinning}
               tone="paper"
+             
             >
               {source === "deck" && (
                 <span className="inline-flex items-center">
@@ -330,15 +330,29 @@ export function RouletteSlot({
               )}
             </FilterBar>
           </div>
-          <p className="mt-2 font-serif text-xs short:mt-1" aria-live="polite">
-            The reels hold{" "}
-            <strong className="font-normal text-crimson">
-              {filtered.length} {filtered.length === 1 ? "picture" : "pictures"}
-            </strong>{" "}
-            · {poolLabel}
-            {filters.genres.length > 0 &&
-              ` · ${filters.genres.map((g) => GENRE_META[g].label).join(", ")}`}
-          </p>
+          {/* The count and Clear are centred as a pair. Clear is always there
+              (just hidden when idle) so nothing moves when it appears, and its
+              negative margin keeps the line no taller than the text. */}
+          <div className="mt-2 flex items-center justify-center gap-1 short:mt-1">
+            <p className="font-serif text-xs" aria-live="polite">
+              The reels hold{" "}
+              <strong className="font-normal text-crimson">
+                {filtered.length} {filtered.length === 1 ? "picture" : "pictures"}
+              </strong>
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "-my-1.5 h-7 px-2 text-crimson hover:bg-crimson/10",
+                !hasActiveFilters(filters) && "invisible"
+              )}
+              disabled={spinning || !hasActiveFilters(filters)}
+              onClick={() => setFilters(EMPTY_FILTERS)}
+            >
+              Clear
+            </Button>
+          </div>
         </section>
 
         {/* The machine, dead centre. The lever hangs off its right edge; on

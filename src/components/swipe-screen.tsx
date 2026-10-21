@@ -4,11 +4,12 @@ import * as React from "react";
 import { Shuffle, Undo2 } from "lucide-react";
 
 import type { Genre, Movie } from "@/lib/types";
-import { EMPTY_FILTERS, applyFilters, type FilterState } from "@/lib/movie-filters";
+import { EMPTY_FILTERS, applyFilters, hasActiveFilters, type FilterState } from "@/lib/movie-filters";
 import { fetchWatchlist } from "@/lib/watchlist-client";
 import { clearSeen, fetchSeenIds, unmarkSeen } from "@/lib/seen-client";
 import { fetchWatchedIds, toggleWatchedIn } from "@/lib/watched-client";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { GildedTitle } from "@/components/broadside";
 import { FilterBar } from "@/components/filter-bar";
 import { SwipeDeck } from "@/components/swipe-deck";
@@ -153,10 +154,26 @@ export function SwipeScreen({ movies, genres }: { movies: Movie[]; genres: Genre
 
       <div className="mb-6">
         <FilterBar genres={genres} value={filters} onChange={changeFilters} />
+        {/* Clear hangs off Reshuffle's right side, so Reshuffle stays centred
+            and nothing moves when it appears. */}
         <div className="mt-3 flex justify-center">
-          <Button variant="secondary" size="sm" onClick={reshuffle} className="h-7 gap-1.5">
-            <Shuffle className="size-3.5" /> Reshuffle
-          </Button>
+          <div className="relative">
+            <Button variant="secondary" size="sm" onClick={reshuffle} className="h-7 gap-1.5">
+              <Shuffle className="size-3.5" /> Reshuffle
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "absolute top-0 left-full ml-1.5 h-7 px-2",
+                !hasActiveFilters(filters) && "invisible"
+              )}
+              disabled={!hasActiveFilters(filters)}
+              onClick={() => changeFilters(EMPTY_FILTERS)}
+            >
+              Clear
+            </Button>
+          </div>
         </div>
       </div>
 

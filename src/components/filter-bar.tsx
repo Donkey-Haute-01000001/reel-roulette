@@ -4,8 +4,7 @@ import * as React from "react";
 
 import type { Genre, GenreSlug } from "@/lib/types";
 import { GENRE_META } from "@/lib/genre-meta";
-import { EMPTY_FILTERS, hasActiveFilters, type FilterState } from "@/lib/movie-filters";
-import { Button } from "@/components/ui/button";
+import type { FilterState } from "@/lib/movie-filters";
 import { cn } from "@/lib/utils";
 
 export function FilterBar({
@@ -33,8 +32,9 @@ export function FilterBar({
     });
   };
 
-  // One compact, centred row: the genre chips, then Clear and any extra
-  // controls (e.g. Reshuffle), wrapping only when the screen is too narrow.
+  // One compact, centred row: the genre chips, then any extra controls
+  // (e.g. Skip Pictures Seen), wrapping only when the screen is too narrow.
+  // Each screen places its own Clear outside the row.
   return (
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {genres.map((g) => {
@@ -60,22 +60,6 @@ export function FilterBar({
           </button>
         );
       })}
-
-      {/* Always in the row (just hidden when idle) so picking a filter never
-          changes where the chips wrap. */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "h-7 px-2",
-          tone === "paper" && "text-crimson hover:bg-crimson/10",
-          !hasActiveFilters(value) && "invisible"
-        )}
-        disabled={disabled || !hasActiveFilters(value)}
-        onClick={() => onChange(EMPTY_FILTERS)}
-      >
-        Clear
-      </Button>
 
       {children}
     </div>
