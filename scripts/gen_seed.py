@@ -326,13 +326,16 @@ CAST = {
 }
 
 # The hand-curated films above, each with its cast; then the films imported
-# from an IMDb list (no cast data). Cast is looked up for the curated ones
-# only, since an import can share a title (Psycho, 1998) with one of them.
+# from an IMDb list, whose cast comes from TMDB (scripts/fetch_tmdb.py). The
+# CAST table is looked up for the curated ones only, since an import can
+# share a title (Psycho, 1998) with one of them.
 ALL_MOVIES = [(*m, CAST.get(m[0], [])) for m in MOVIES]
 IMPORTED = json.loads((pathlib.Path(__file__).parent / "imdb_movies.json").read_text(encoding="utf-8"))
+TMDB = json.loads((pathlib.Path(__file__).parent / "tmdb_extra.json").read_text(encoding="utf-8"))
 for m in IMPORTED:
+    cast = TMDB.get(m["imdb_id"], {}).get("cast", [])
     ALL_MOVIES.append((m["title"], m["year"], m["director"], m["runtime"], m["rating"],
-                       m["primary_genre"], m["genres"], m["moods"], m["synopsis"], []))
+                       m["primary_genre"], m["genres"], m["moods"], m["synopsis"], cast))
 
 # Guard the seed before writing it: movie_genres finds each film by title
 # and year, so those must be unique, and every slug must be a real genre.
